@@ -1,0 +1,18 @@
+# Compilado
+target/
+*.jar
+
+# Multimedia generada (videos y audio)
+*.mp4
+*.mp3
+videos_piloto/
+video_ejemplo/
+videos_artlist/
+
+# Logs (pueden contener fragmentos de tokens OAuth)
+*.log
+demo_youtube_api_log.txt
+
+# Configuracion local (claves/credenciales)
+config.properties
+*.properties

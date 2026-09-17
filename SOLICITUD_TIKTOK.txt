@@ -1,0 +1,62 @@
+SOLICITUD DE ACCESO A TIKTOK (Content Posting API)
+====================================================
+
+Cuenta de destino: @historiasrea28
+URL de referencia: https://www.tiktok.com/@historiasrea28
+Política de privacidad pública (ya publicada):
+  https://menesesdavian1-source.github.io/construyendo-valores-web/privacy-policy.html
+
+QUE SE PIDE
+-----------
+Permiso de TikTok "Content Posting API" (OAuth scopes: video.upload y video.publish)
+para publicar de forma automatizada los videos del canal educativo
+"Construyendo Valores" (cuentos de valores + tecnología/historia para niños).
+
+PASOS PARA OBTENERLO (los hace la cuenta dueña)
+------------------------------------------------
+1. Crear/entrar en una cuenta de DESARROLLADOR (no es necesario que sea la misma):
+   https://developers.tiktok.com
+2. Crear una aplicación (App Console) y escoger el caso de uso
+   "Content Posting API / Publicar videos".
+3. Solicitar los scopes: user.info.basic, video.upload, video.publish.
+4. Rellenar la solicitud de revisión con el texto de abajo.
+5. Una vez aprobada, copiar Client Key y Client Secret y configurarlos en el programa:
+   config.properties:
+     tiktok.clientKey=...
+     tiktok.clientSecret=...
+     tiktok.handle=historiasrea28
+6. Ejecutar en consola:
+     --tiktok-auth  (autoriza con la cuenta @historiasrea28)
+     --tiktok-auto true  (se publica automaticamente cada video diario)
+7. Comprobar opciones: --tiktok-publicar <video.mp4> publica un video concreto.
+
+TEXTO PARA LA SOLICITUD DE REVISION (copiar/adaptar)
+-----------------------------------------------------
+"Queremos publicar los videos de nuestro canal educativo infantil
+'Construyendo Valores' (cuentos y tecnologia para ninos) directamente
+desde nuestro flujo de produccion automatico, que genera cada video y lo
+sube tanto a YouTube como a TikTok.
+
+Casos de uso:
+- Publicar 1 video corto al dia (30-60 segundos) en formato vertical.
+- Usar la cuenta propia @historiasrea28 (nuestro canal infantil) para
+  programar y automatizar esa publicacion diaria.
+- No editamos ni borramos contenido ajeno; solo publicamos creaciones
+  propias originales.
+
+Contenido y cumplimiento:
+- Todo el contenido esta dirigido a ninos, es educativo y no contiene
+  datos personales de terceros.
+- Contamos con politica de privacidad publica y enlaces de revocacion:
+  https://menesesdavian1-source.github.io/construyendo-valores-web/privacy-policy.html
+- Mantendremos los publicos por defecto (PUBLIC_TO_EVERYONE) y revisaremos
+  manualmente cada video en TikTok Studio antes/despues de la publicacion
+  programada."
+
+NOTAS IMPORTANTES
+-----------------
+- TikTok revisa la solicitud manualmente (puede tardar unos dias).
+- Mientras tanto, la ruta MANUAL sigue funcionando: cada video diario ya
+  deja listo el paquete en  ParaTikTok\<fecha>\  con el Short de 30 s y su
+  FICHA.txt con titulo gancho, descripcion, hashtags y la pregunta para el
+  primer comentario (para subir en https://www.tiktok.com/upload).

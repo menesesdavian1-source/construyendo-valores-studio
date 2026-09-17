@@ -1,0 +1,124 @@
+AUDIT DE YOUTUBE - GUIA EXPRES (10 minutos)
+=============================================
+
+POR QUE EXISTE ESTE DOCUMENTO
+-----------------------------
+Sin el audit, YouTube fuerza a "privado" toda subida hecha por API (probado:
+403 Forbidden al intentar hacer publico el video "Tito no se rinde..."). Este
+documento te permite completar el audit gratis en ~10 min. Cuando Google lo
+apruebe: ejecuta `--youtube-publicar-todos` y las subidas futuras seran
+publicas automaticamente.
+
+DATOS QUE NECESITARAS (completalos antes de empezar)
+----------------------------------------------------
+- Correo de contacto (el del canal / tu Gmail).
+- NOMBRE DE LA APP:      Construyendo Valores Studio
+- HOME PAGE (publica):   https://menesesdavian1-source.github.io/construyendo-valores-web/
+- PRIVACY POLICY URL:    https://menesesdavian1-source.github.io/construyendo-valores-web/privacy-policy.html
+- URL DEL CANAL:    https://www.youtube.com/channel/UCMD3CbCEBS0qH_-5_JlD9IQ  (@construyendovalores-i2r)
+                    (renovarla en cualquier momento con:  --youtube-canal )
+- PROJECT ID numerico:   Google Cloud > IAM y administracion > Configuracion
+                          > "Numero de proyecto" (empieza por mfk110... o similar).
+- SCOPE usados por la app:  https://www.googleapis.com/auth/youtube
+
+PASO 0 (2 min) - Preparar la consola de Google Cloud
+----------------------------------------------------
+1. https://console.cloud.google.com/apis/credentials/consent
+2. En "Informacion de la aplicacion": agrega la HOME PAGE y la PRIVACY POLICY
+   (las dos URLs de arriba). Guarda.
+3. En "Scopes (alcances)": confirma que figura el alcance de YouTube Data API.
+   (La app ya lo solicita en la autorizacion OAuth.)
+
+PASO 1 (2 min) - Tomar 5 capturas de pantalla (PNG/JPG, que se lean bien)
+-------------------------------------------------------------------------
+Captura 1 - POLITICA DE PRIVACIDAD (navegador):
+  Abre  https://menesesdavian1-source.github.io/construyendo-valores-web/privacy-policy.html
+  En la captura DEBE verse: la URL en la barra del navegador, la seccion
+  "2. Uso de los servicios de la API de YouTube" y el enlace a la
+  "Politica de privacidad de Google". Nombre: 1_politica.png
+
+Captura 2 - SECCION DE REVOCACION:
+  Desplaza la misma pagina hasta la seccion "6. Retencion y eliminacion"
+  donde se ve el enlace para revocar el acceso
+  (https://security.google.com/settings/security/permissions).
+  Nombre: 2_revocacion.png
+
+Captura 3 - PANTALLA DE CONSENTIMIENTO OAuth (Google Cloud):
+  Console > OAuth consent screen, con: nombre de la app, HOME PAGE y
+  PRIVACY POLICY cargadas, y el scope de YouTube. Nombre: 3_consentimiento.png
+
+Captura 4 - AUTORIZACION DE GOOGLE (navegador):
+  Ejecuta `--youtube-auth`; captura la pagina de accounts.google.com que
+  pide permiso mostrando la app "Construyendo Valores Studio" (o la pestana
+  localhost:8765 "Autorizado. Ya puedes cerrar esta pestana").
+  Nombre: 4_autorizacion.png
+
+Captura 5 - USO DE LA API / CONTENIDO PROPIO:
+  Una terminal ejecutando la app (ej. `--youtube-ultimos`) O YouTube Studio
+  mostrando los videos del canal (solo contenido propio original).
+  Nombre: 5_uso_api.png
+
+PASO 2 (5 min) - Formulario del audit
+-------------------------------------
+Formulario: https://support.google.com/youtube/contact/yt_api_form
+(el formulario oficial de la encuesta/audit de YouTube Data API, gratis)
+
+Textos en INGLES (recomendado) para pegar:
+
+WHAT API ARE YOU USING?
+   YouTube Data API v3 (OAuth 2.0).
+
+EXPLAIN HOW YOU USE THE YOUTUBE API (main text):
+   "We built a small desktop app (single-user) that produces original
+   educational videos for children and uploads them to the channel owner's
+   own YouTube channel. The app uses the YouTube Data API to: upload videos
+   (videos.insert), schedule their publication time, set/edit their privacy
+   status (videos.update), and read the channel's uploads and video states
+   (channels.list, playlistItems.list, videos.list). We only access and
+   operate on the authenticated owner's own channel. We do not read, post,
+   or edit any third-party content."
+
+DO YOU STORE USER DATA?
+   "No. The app does not store personal data of any user. It only keeps the
+   owner's OAuth tokens and app configuration in a local file on the owner's
+   computer. It does not interact with end viewers at all."
+
+DO YOU REUSE OR CONTRIBUTE TO THIRD-PARTY CONTENT?
+   "No. All videos are original creations of the channel. Every video is
+   declared Made for Kids (selfDeclaredMadeForKids=true)."
+
+PRIVACY POLICY / DATA RETENTION:
+   See our public privacy policy:
+   https://menesesdavian1-source.github.io/construyendo-valores-web/privacy-policy.html
+   It includes the required disclosure about the YouTube API Services, a link
+   to the Google Privacy Policy, and how to revoke access.
+
+SAME TEXT IN SPANISH (por si lo prefieren):
+   "Aplicacion de escritorio de un solo usuario que produce videos educativos
+   infantiles originales y los publica en el canal propio del dueno. Usa la
+   YouTube Data API v3 para: subir videos (videos.insert), programar su
+   publicacion y gestionar su privacidad (videos.update), y consultar el
+   estado del canal (channels.list, playlistItems.list, videos.list). La app
+   no almacena datos personales de usuarios; solo tokens locales del dueno.
+   Todo el contenido es creacion original y se marca Made for Kids."
+
+PASO 3 - Enviar y esperar
+-------------------------
+- Adjunta las 5 capturas. Envia.
+- La respuesta llega por correo (a veces en minutos; puede tardar dias).
+- Mientras esperas, los videos de HOY se publican manualmente en YouTube
+  Studio (Editar > Visibilidad > Publico) si quieres que aparezcan ya.
+
+PASO 4 - Cuando llegue la aprobacion (1 min)
+--------------------------------------------
+- Ejecuta:  --youtube-publicar-todos
+- A partir de ese momento cada subida diaria sale publica automaticamente
+  (la app ya pide "public" de forma predeterminada).
+- Verificalo con:  --youtube-ultimos   (los videos deben decir "public").
+
+PREGUNTAS FRECUENTES
+--------------------
+- "Por que mi canal esta vacio?"  -> Porque sin audit YouTube forza private.
+- "El audit es gratis?"           -> Si. Es el formulario gratuito oficial.
+- "Tengo que hacer algo con el proyecto?" -> Solo la pantalla OAuth del PASO 0.
+- "Puedo compartir capturas con marcas de agua?" -> Mejor no; deben leerse bien.
