@@ -15,6 +15,7 @@ public class Scene {
     public String bigWord = "";
     public int listNumber = 0;
     public double revealAt = 0.0;
+    public String emotion = "";
 
     public Scene(int index, String character, String narration) {
         this.index = index;

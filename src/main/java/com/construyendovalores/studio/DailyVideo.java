@@ -457,6 +457,28 @@ public final class DailyVideo {
                     + String.join("; ", q.errores()));
         }
         q.avisos().forEach(w -> log.accept("  AVISO: " + w));
+
+        double umbral = cfg.getDouble("calidad.umbral", 0);
+        if (umbral > 0) {
+            try {
+                IndiceCalidad.Resultado iq = IndiceCalidad.evaluar(cfg, video, log);
+                if (iq.indice() < umbral) {
+                    log.accept("PORTÓN DE CALIDAD: índice " + String.format(java.util.Locale.ROOT, "%.1f", iq.indice())
+                            + " < umbral " + umbral + ". No se sube hoy.");
+                    Metricas.registrar(cfg, LocalDate.now().toString(), tipo, titulo, video.toString(),
+                            "FALLO_UMBRAL", "", "", log);
+                    throw new IllegalStateException("Video bajo el umbral de calidad (" + video.getFileName() + ").");
+                }
+                log.accept("  Índice de calidad: " + String.format(java.util.Locale.ROOT, "%.0f", iq.indice())
+                        + "/100 (umbral " + umbral + ")");
+            } catch (IllegalStateException e) {
+                throw e;
+            } catch (Exception e) {
+                log.accept("  AVISO: no se pudo medir el índice de calidad (" + e.getMessage().split("\\n")[0]
+                        + "); se sube con el control técnico únicamente.");
+            }
+        }
+
         int hour = Integer.parseInt(cfg.get("youtube.publishHour", "9"));
         OffsetDateTime publishAt = nextPublish(hour);
         log.accept("Subiendo a YouTube (se publicará a las " + hour + ":00)...");

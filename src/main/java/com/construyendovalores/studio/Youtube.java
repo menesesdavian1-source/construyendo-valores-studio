@@ -99,14 +99,17 @@ public final class Youtube {
                 + "&access_type=offline"
                 + "&prompt=consent";
         log.accept("Abriendo el navegador... Autoriza y acepta el permiso.");
+        log.accept("Si no se abre solo, pega este enlace en el navegador:\n" + url);
         try {
             java.awt.Desktop.getDesktop().browse(URI.create(url));
         } catch (Exception e) {
-            log.accept("Abre manualmente en tu navegador:\n" + url);
+            log.accept("No pude abrir el navegador automaticamente.");
         }
-        if (!latch.await(5, TimeUnit.MINUTES)) {
+        int minutos = (int) Math.max(1, cfg.getDouble("youtube.authTimeoutMin", 15));
+        if (!latch.await(minutos, TimeUnit.MINUTES)) {
             server.stop(0);
-            throw new IllegalStateException("No se recibió la autorización (tiempo agotado).");
+            throw new IllegalStateException("No se recibió la autorización (tiempo agotado tras "
+                    + minutos + " min).");
         }
         server.stop(0);
         if (code[0] == null) {
@@ -252,7 +255,7 @@ public final class Youtube {
                         .format(DateTimeFormatter.ISO_INSTANT) + "\"") + "}";
         StringBuilder sn = new StringBuilder("\"snippet\":{\"title\":" + json(title)
                 + ",\"description\":" + json(description)
-                + ",\"categoryId\":\"24\",\"defaultLanguage\":\"es\"");
+                + ",\"categoryId\":\"" + cfg.get("youtube.categoryId", "27") + "\",\"defaultLanguage\":\"es\"");
         if (tags != null && !tags.isEmpty()) {
             StringBuilder t = new StringBuilder();
             for (String tag : tags) {
@@ -436,10 +439,81 @@ public final class Youtube {
         }
     }
 
+    /** Video de un canal competidor (para el barrido diario). */
+    public record CompetidorVideo(String id, String titulo, String fecha, long vistas,
+                                  long megusta, long comentarios, long duracion) {
+    }
+
+    /**
+     * Últimos videos públicos de un canal ajeno (playlist de subidas UU<...> + videos).
+     * No requiere la sesión del canal propio; usa la playlist pública de subidas.
+     */
+    public static List<CompetidorVideo> listCompetidor(Config cfg, String channelId, int max) throws Exception {
+        if (channelId == null || channelId.length() < 3 || !channelId.startsWith("UC")) return List.of();
+        String at = accessToken(cfg);
+        String uploads = "UU" + channelId.substring(2);
+        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
+        HttpRequest pi = HttpRequest.newBuilder(URI.create("https://www.googleapis.com/youtube/v3/playlistItems"
+                + "?part=snippet&playlistId=" + enc(uploads) + "&maxResults=" + max))
+                .timeout(Duration.ofSeconds(60)).header("Authorization", "Bearer " + at).GET().build();
+        HttpResponse<String> rpi = client.send(pi, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (rpi.statusCode() / 100 != 2) {
+            throw new RuntimeException("No se pudo listar al competidor (" + rpi.statusCode() + "): " + rpi.body());
+        }
+        List<String> ids = new ArrayList<>();
+        JsonObject po = JsonParser.parseString(rpi.body()).getAsJsonObject();
+        for (var it = po.getAsJsonArray("items").iterator(); it.hasNext(); ) {
+            var v = (JsonObject) it.next();
+            ids.add(v.getAsJsonObject("snippet").get("resourceId").getAsJsonObject().get("videoId").getAsString());
+        }
+        if (ids.isEmpty()) return List.of();
+        HttpRequest vq = HttpRequest.newBuilder(URI.create("https://www.googleapis.com/youtube/v3/videos"
+                + "?part=statistics,contentDetails,snippet&id=" + enc(String.join(",", ids))))
+                .timeout(Duration.ofSeconds(60)).header("Authorization", "Bearer " + at).GET().build();
+        HttpResponse<String> rv = client.send(vq, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (rv.statusCode() / 100 != 2) {
+            throw new RuntimeException("No se pudo leer al competidor (" + rv.statusCode() + "): " + rv.body());
+        }
+        List<CompetidorVideo> out = new ArrayList<>();
+        JsonObject vo = JsonParser.parseString(rv.body()).getAsJsonObject();
+        for (var it = vo.getAsJsonArray("items").iterator(); it.hasNext(); ) {
+            var v = (JsonObject) it.next();
+            JsonObject sn = v.getAsJsonObject("snippet");
+            JsonObject cd = v.has("contentDetails") ? v.getAsJsonObject("contentDetails") : new JsonObject();
+            out.add(new CompetidorVideo(v.get("id").getAsString(),
+                    sn.has("title") ? sn.get("title").getAsString() : "",
+                    sn.has("publishedAt") ? sn.get("publishedAt").getAsString() : "",
+                    num(v.has("statistics") ? v.getAsJsonObject("statistics") : new JsonObject(), "viewCount"),
+                    num(v.has("statistics") ? v.getAsJsonObject("statistics") : new JsonObject(), "likeCount"),
+                    num(v.has("statistics") ? v.getAsJsonObject("statistics") : new JsonObject(), "commentCount"),
+                    isoDur(cd.has("duration") ? cd.get("duration").getAsString() : "")));
+        }
+        return out;
+    }
+
+    /** Convierte PT1H2M3S (ISO 8601) a segundos. */
+    private static long isoDur(String s) {
+        try {
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                    .compile("PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?").matcher(s);
+            if (!m.find()) return 0;
+            return (m.group(1) != null ? Long.parseLong(m.group(1)) * 3600 : 0)
+                    + (m.group(2) != null ? Long.parseLong(m.group(2)) * 60 : 0)
+                    + (m.group(3) != null ? Long.parseLong(m.group(3)) : 0);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     /** Intenta hacer público un video ya subido (videos.update). Para proyectos con audit aprobado. */
     public static String setPublic(Config cfg, String videoId) throws Exception {
+        return setPrivacy(cfg, videoId, "public");
+    }
+
+    /** Cambia la privacidad de un video ya subido (videos.update, part=status). */
+    public static String setPrivacy(Config cfg, String videoId, String privacy) throws Exception {
         String at = accessToken(cfg);
-        String payload = "{\"status\":{\"privacyStatus\":\"public\"}}";
+        String payload = "{\"status\":{\"privacyStatus\":\"" + privacy + "\"}}";
         HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
         HttpRequest req = HttpRequest.newBuilder(URI.create("https://www.googleapis.com/youtube/v3/videos"
                 + "?part=status&id=" + enc(videoId)))
@@ -450,13 +524,69 @@ public final class Youtube {
                 .build();
         HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         if (resp.statusCode() / 100 != 2) {
-            throw new RuntimeException("YouTube rechazó hacer público el video (" + resp.statusCode()
-                    + "): " + resp.body() + "\n\nTu proyecto de Google Cloud aún no pasó el audit de YouTube. "
-                    + "Hazlo gratis aquí: https://support.google.com/youtube/contact/yt_api_form . "
-                    + "Hasta entonces, los videos subidos por la app quedan privados.");
+            throw new RuntimeException("YouTube rechazó cambiar la privacidad a " + privacy + " ("
+                    + resp.statusCode() + "): " + resp.body());
         }
         JsonObject o = JsonParser.parseString(resp.body()).getAsJsonObject();
         return o.getAsJsonObject("status").get("privacyStatus").getAsString();
+    }
+
+    /** Re-titula y mejora etiquetas/categoría de un video ya subido (videos.update, part=snippet). */
+    public static void setMetadata(Config cfg, String videoId, String newTitle,
+                                   List<String> tags, String categoryId) throws Exception {
+        String at = accessToken(cfg);
+        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
+        // Lee el snippet actual para no borrar la descripción al reescribir el título.
+        HttpRequest get = HttpRequest.newBuilder(URI.create("https://www.googleapis.com/youtube/v3/videos"
+                + "?part=snippet&id=" + enc(videoId)))
+                .timeout(Duration.ofSeconds(60)).header("Authorization", "Bearer " + at).GET().build();
+        HttpResponse<String> rg = client.send(get, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (rg.statusCode() / 100 != 2) {
+            throw new RuntimeException("No se pudo leer el video " + videoId + " (" + rg.statusCode() + "): "
+                    + rg.body());
+        }
+        JsonObject sn = JsonParser.parseString(rg.body()).getAsJsonObject()
+                .getAsJsonArray("items").get(0).getAsJsonObject().getAsJsonObject("snippet");
+        String desc = sn.has("description") ? sn.get("description").getAsString() : "";
+        StringBuilder sb = new StringBuilder("\"snippet\":{\"title\":" + json(newTitle)
+                + ",\"description\":" + json(desc)
+                + ",\"categoryId\":\"" + (categoryId == null ? "27" : categoryId) + "\",\"defaultLanguage\":\"es\"");
+        if (tags != null && !tags.isEmpty()) {
+            StringBuilder t = new StringBuilder();
+            for (String tag : tags) t.append(',').append(json(tag.trim()));
+            sb.append(",\"tags\":[").append(t.substring(1)).append("]");
+        }
+        sb.append("}");
+        String payload = "{" + sb + "}";
+        HttpRequest req = HttpRequest.newBuilder(URI.create("https://www.googleapis.com/youtube/v3/videos"
+                + "?part=snippet"))
+                .timeout(Duration.ofSeconds(60))
+                .header("Authorization", "Bearer " + at)
+                .header("Content-Type", "application/json; charset=UTF-8")
+                .PUT(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
+                .build();
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (resp.statusCode() / 100 != 2) {
+            throw new RuntimeException("YouTube rechazó el nuevo título de " + videoId + " ("
+                    + resp.statusCode() + "): " + resp.body());
+        }
+    }
+
+    /** Elimina un video del canal (videos.delete). El canal debe ser el vinculado. */
+    public static void delete(Config cfg, String videoId) throws Exception {
+        String at = accessToken(cfg);
+        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(30)).build();
+        HttpRequest req = HttpRequest.newBuilder(URI.create("https://www.googleapis.com/youtube/v3/videos"
+                + "?id=" + enc(videoId)))
+                .timeout(Duration.ofSeconds(60))
+                .header("Authorization", "Bearer " + at)
+                .DELETE()
+                .build();
+        HttpResponse<String> resp = client.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (resp.statusCode() != 204 && resp.statusCode() / 100 != 2) {
+            throw new RuntimeException("YouTube rechazó borrar " + videoId + " ("
+                    + resp.statusCode() + "): " + resp.body());
+        }
     }
 
     private static String json(String s) {

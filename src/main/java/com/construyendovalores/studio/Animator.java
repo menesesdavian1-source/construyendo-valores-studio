@@ -21,11 +21,13 @@ import java.util.List;
  */
 public final class Animator {
 
-    private static final int W = 720;
-    private static final int H = 1280;
+    private static final int W = 1080;
+    private static final int H = 1920;
+    private static final double STAGE = 1.5; // dibujamos en espacio 720x1280 y rasterizamos a 1080x1920
     private static final int FPS = 25;
 
     public static void animate(Config cfg, Scene sc, String title, Path clipsDir) throws Exception {
+        Actor.configuraMovimiento(cfg.getDouble("calidad.movimiento", 1.0));
         double dur = Math.max(1.2, sc.audioSeconds + 0.45);
         Path framesDir = clipsDir.resolve("f_" + String.format("%02d", sc.index));
         Files.createDirectories(framesDir);
@@ -43,9 +45,53 @@ public final class Animator {
     }
 
     public static void renderStill(Scene sc, String title, Path outPng) throws Exception {
-        BufferedImage img = paintFrame(sc, title, 0.7, false, 1.0);
+        BufferedImage img = paintFrame(sc, title, 0.35, false, 2.2);
         Files.createDirectories(outPng.getParent());
         ImageIO.write(img, "png", outPng.toFile());
+    }
+
+    /** Fotograma de una escena (para pruebas y comparativas). */
+    public static BufferedImage frameFor(Scene sc, String title, double t, boolean intro, double dur) {
+        return paintFrame(sc, title, t, intro, dur);
+    }
+
+    /** Cámara cinematográfica: plano elegido por índice de escena, easing suave y pulso de mano. */
+    private static double[] cameraAt(int index, boolean intro, double t, double dur) {
+        double u = Math.min(1.0, Math.max(0.0, t / Math.max(0.01, dur)));
+        double e = (1 - Math.cos(Math.PI * u)) / 2.0; // easeInOutCubic suave
+        double px = 0, py = 0, zoom = 1.0;
+        int move = intro ? 0 : index % 5;
+        switch (move) {
+            case 0 -> { // push-in (clima/emocion)
+                zoom = 1.0 + 0.045 * e;
+                py = -7 * e;
+            }
+            case 1 -> { // paneo lento derecha con leve zoom
+                px = lerp(-9, 9, e);
+                zoom = 1.02 + 0.015 * u;
+            }
+            case 2 -> { // zoom-out revela escena
+                zoom = 1.06 - 0.04 * e;
+                px = 4 * Math.sin(u * Math.PI);
+            }
+            case 3 -> { // traveling diagonal
+                px = lerp(-7, 4, e);
+                py = lerp(6, -6, e);
+                zoom = 1.03;
+            }
+            default -> { // balanceo suave (contemplativo)
+                px = 8 * Math.sin(2 * Math.PI * u * 1.1);
+                zoom = 1.0 + 0.02 * Math.sin(2 * Math.PI * u * 2.0);
+            }
+        }
+        // pulso de mano casi imperceptible: da vida sin marear
+        double hx = 2.1 * Math.sin(2 * Math.PI * 9.7 * t + index * 1.7);
+        double hy = 1.7 * Math.cos(2 * Math.PI * 8.3 * t + index * 0.9);
+        return new double[]{px + hx, py + hy, zoom};
+    }
+
+    private static double lerp(double a, double b, double u) {
+        return a + (b - a) * u;
     }
 
     private static BufferedImage paintFrame(Scene sc, String title, double t, boolean intro, double dur) {
@@ -55,6 +101,12 @@ public final class Animator {
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.scale(STAGE, STAGE); // dibujamos en coordenadas de 720x1280, raster nativo 1080x1920
+
+        double[] cam = cameraAt(sc.index, intro, t, dur);
+        g.translate(W / 2.0, H / 2.0);
+        g.scale(cam[2], cam[2]);
+        g.translate(-W / 2.0 + cam[0], -H / 2.0 + cam[1]);
 
         Color base = SceneImage.colorFor(sc.character);
         GradientPaint sky = new GradientPaint(0, 0, SceneImage.lighten(base, 0.55f), 0, H, base.darker());
@@ -78,10 +130,26 @@ public final class Animator {
 
         Actor.draw(g, W / 2, bottomY, t, 1.15, base, Actor.moodFor(sc.index), sc.index % 2 == 0, Actor.designFor(sc.character));
         if (intro) drawConfetti(g, t);
+        grade(g);
         drawVignette(g);
 
         g.dispose();
         return img;
+    }
+
+    /** Corrección de color cinematográfica suave: sombras tibias / luces frías. */
+    private static void grade(Graphics2D g) {
+        int w = W, h = H;
+        g.setComposite(java.awt.AlphaComposite.SrcOver.derive(0.085f));
+        g.setPaint(new GradientPaint(0, h * 0.32f, new Color(255, 150, 70), 0, h, new Color(90, 40, 10)));
+        g.fillRect(0, 0, w, (int) (h * 0.62f));
+        g.setComposite(java.awt.AlphaComposite.SrcOver.derive(0.06f));
+        g.setPaint(new GradientPaint(0, 0, new Color(70, 130, 180), 0, h * 0.55f, new Color(70, 130, 180, 0)));
+        g.fillRect(0, 0, w, (int) (h * 0.55f));
+        g.setComposite(java.awt.AlphaComposite.SrcOver.derive(0.10f));
+        g.setPaint(new GradientPaint(0, h * 0.55f, new Color(120, 60, 20, 0), 0, h, new Color(60, 25, 8)));
+        g.fillRect(0, (int) (h * 0.55f), w, h - (int) (h * 0.55f));
+        g.setComposite(java.awt.AlphaComposite.SrcOver);
     }
 
     private static BufferedImage paintKaraokeFrame(Scene sc, String title, double t) {
@@ -91,6 +159,12 @@ public final class Animator {
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g.scale(STAGE, STAGE);
+
+        double[] cam = cameraAt(sc.index, false, t, Math.max(1.2, sc.audioSeconds + 0.45));
+        g.translate(W / 2.0, H / 2.0);
+        g.scale(cam[2], cam[2]);
+        g.translate(-W / 2.0 + cam[0], -H / 2.0 + cam[1]);
 
         Color base = SceneImage.colorFor(sc.character);
         GradientPaint sky = new GradientPaint(0, 0, SceneImage.lighten(base, 0.55f), 0, H, base.darker());
@@ -101,9 +175,13 @@ public final class Animator {
         drawClouds(g, t * 1.3);
         Scenario.fromId(sc.scenario).paint(g, W, H, sc.index, t);
 
-        g.setFont(new Font("Arial", Font.BOLD, 30));
-        g.setColor(new Color(255, 255, 255, 220));
-        g.drawString("CONSTRUYENDO VALORES - RONDA", 40, 62);
+        String hdr = "CONSTRUYENDO VALORES · CANCIÓN";
+        g.setFont(new Font("Arial", Font.BOLD, 27));
+        int hw = g.getFontMetrics().stringWidth(hdr);
+        g.setColor(new Color(20, 20, 40, 192));
+        g.fillRoundRect(26, 26, hw + 40, 50, 25, 25);
+        g.setColor(new Color(255, 235, 130));
+        g.drawString(hdr, 46, 62);
         if (title != null && !title.isBlank()) {
             FontMetrics fm = g.getFontMetrics();
             String tt = title.length() > 30 ? title.substring(0, 30) + "…" : title;
@@ -137,6 +215,7 @@ public final class Animator {
 
         drawMusicNotes(g, t);
         drawLyricPanel(g, sc, t);
+        grade(g);
         drawVignette(g);
 
         g.dispose();
@@ -145,7 +224,7 @@ public final class Animator {
 
     private static double karaokeLift(Scene sc, double t) {
         double phase = beatPhase(sc, t);
-        return phase < 0.7 ? 34 * Math.exp(-7 * phase) : 0;
+        return phase < 0.7 ? 34 * Math.exp(-7 * phase) * Actor.MOV : 0;
     }
 
     private static int moodForIndex(int i) {
@@ -457,7 +536,7 @@ public final class Animator {
                 javax.imageio.ImageIO.getImageWritersBySuffix("jpg").next();
         javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
         param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
-        param.setCompressionQuality(0.92f);
+        param.setCompressionQuality(0.95f);
         try (javax.imageio.stream.ImageOutputStream ios =
                      javax.imageio.ImageIO.createImageOutputStream(out.toFile())) {
             writer.setOutput(ios);
@@ -466,7 +545,7 @@ public final class Animator {
         writer.dispose();
     }
 
-    private static void encode(Config cfg, Scene sc, double dur, Path framesDir, Path clipsDir) throws Exception {
+    static void encode(Config cfg, Scene sc, double dur, Path framesDir, Path clipsDir) throws Exception {
         String ffmpeg = cfg.ffmpeg();
         String pattern = framesDir.resolve("f_%05d.jpg").toString();
         Path clip = clipsDir.resolve("clip_" + String.format("%02d", sc.index) + ".mp4");

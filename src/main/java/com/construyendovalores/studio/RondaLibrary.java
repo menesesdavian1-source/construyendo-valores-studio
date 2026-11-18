@@ -98,6 +98,40 @@ public final class RondaLibrary {
                                 "qE4 eE4 qC4 eC4 qD4 eD4 hC4"),
                         new Ronda.RondaLine("¡Aserrín, aserrán, y a trabajar!",
                                 "qG4 eG4 qE4 eA4 qG4 eG4 hC4"))));
+
+        add(new Ronda("casquito", "La canción de Casquito", 118, "obra", "Perseverancia",
+                "Canción original de los constructores mágicos. Casquito y sus amigos cantan "
+                        + "sobre la perseverancia: la torre que quería besar a las nubes.",
+                "canciones infantiles,perseverancia,construyendo valores,casquito,música para niños,"
+                        + "valores para niños,la torre que besa las nubes",
+                "¡Hola, constructorcitos! Soy Casquito. Hoy les canto mi canción favorita: la de la torre "
+                        + "que quería besar a las nubes. ¡Aplaudan y canten conmigo! ¡Perseverar!",
+                List.of(
+                        new Ronda.RondaLine("Construyo mi torre con ladrillo y amor,",
+                                "qC4 eE4 eG4 qG4 eD4 eE4 qD4 hC4"),
+                        new Ronda.RondaLine("si se cae otra vez, la vuelvo a alzar con valor.",
+                                "qE4 eG4 eA4 qG4 eE4 qD4 eE4 qD4 hC4"),
+                        new Ronda.RondaLine("¡Perseverar, perseverar, bloque a bloque hay que subir!",
+                                "qC5 eB4 eA4 qG4 eA4 qG4 eE4 qD4 hC4"),
+                        new Ronda.RondaLine("si la torre se cayó, con amigos subirá.",
+                                "qE4 qG4 eA4 qG4 qE4 eE4 eD4 qE4 hC4"))));
+
+        add(new Ronda("pipo", "La canción de Pipo", 120, "parque", "Compartir",
+                "Canción original sobre compartir: Pipo, el perro dorado, reparte su pan dorado "
+                        + "con toda la aldea y descubre que todo sabe mejor en equipo.",
+                "canciones infantiles,compartir,construyendo valores,pipo,música para niños,"
+                        + "valores para niños,generosidad",
+                "¡Hola, amiguitos! Soy Tico y hoy Pipo, el perro dorado, tiene un pan dorado muy "
+                        + "especial. ¡Cantemos sobre compartir! ¡Todos a mover la cola!",
+                List.of(
+                        new Ronda.RondaLine("Pipo tiene un pan dorado y quiere compartir,",
+                                "qC4 eE4 eG4 qG4 eE4 qD4 eE4 hC4"),
+                        new Ronda.RondaLine("un pedacito para ti y otro pedacito para mí.",
+                                "qE4 eG4 eA4 qG4 qE4 eD4 eE4 hC4"),
+                        new Ronda.RondaLine("¡Compartir, compartir, qué lindo es compartir!",
+                                "qC5 eB4 eA4 qG4 eA4 qG4 eE4 qD4 hC4"),
+                        new Ronda.RondaLine("con amigos todo sabe mejor, mejor, mejor.",
+                                "qE4 qG4 eA4 qG4 qE4 eE4 eD4 qE4 hC4"))));
     }
 
     private static void add(Ronda r) {

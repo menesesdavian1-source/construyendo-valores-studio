@@ -37,14 +37,21 @@ final class Actor {
     static final String DESIGN_MEMO = "buho";
     static final String DESIGN_COCO = "guacamaya";
 
+    /** Energía de movimiento global (calidad.movimiento): 1.0 = base, +10% diario. */
+    static volatile double MOV = 1.0;
+
+    static void configuraMovimiento(double v) {
+        MOV = Math.max(0.7, Math.min(1.8, v));
+    }
+
     static void draw(Graphics2D g, int cx, int bottomY, double t, double scale, Color accent, int mood, boolean waving) {
         draw(g, cx, bottomY, t, scale, accent, mood, waving, DESIGN_MASCOT);
     }
 
     static void draw(Graphics2D g, int cx, int bottomY, double t, double scale, Color accent, int mood, boolean waving, String design) {
         double bob = Math.sin(2 * Math.PI * 1.15 * t);
-        int yOff = (int) (bob * 16 * scale);
-        double tilt = 0.05 * Math.sin(2 * Math.PI * 0.45 * t);
+        int yOff = (int) (bob * 22 * scale * MOV);
+        double tilt = 0.05 * Math.sin(2 * Math.PI * 0.45 * t) * MOV;
         boolean blink = (t % 1.9) < 0.10;
 
         g.translate(cx, bottomY - yOff);

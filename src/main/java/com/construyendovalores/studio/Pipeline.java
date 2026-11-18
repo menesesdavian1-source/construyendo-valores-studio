@@ -28,16 +28,52 @@ public final class Pipeline {
             progress.accept("Voz " + sc.index + "/" + scenes.size() + " (" + sc.character + ")");
             Path mp3 = audioDir.resolve("escena_" + sc.index + ".mp3");
             String voice = cfg.voiceFor(sc.character);
-            Tts.synth(cfg, sc.character, voice, sc.narration, mp3);
-            sc.audioFile = mp3.toString();
-            Path ff = Paths.get(cfg.ffmpeg()).getParent().resolve("ffprobe.exe");
-            if (!Files.exists(ff)) ff = Paths.get(cfg.ffmpeg().replace("ffmpeg", "ffprobe"));
-            sc.audioSeconds = Tts.durationWithPause(mp3, ff.toString());
+            Tts.synth(cfg, sc.character, voice, sc.narration, mp3, sc.emotion);
+            Path studio = audioDir.resolve("escena_" + sc.index + "_studio.mp3");
+            AudioStudio.polishVoice(cfg, mp3, studio, new StringBuilder());
+            sc.audioFile = studio.toString();
+            sc.audioSeconds = AudioStudio.durationWithPause(cfg, studio);
         }
 
+        boolean cine = "true".equalsIgnoreCase(cfg.get("cine.habilitado", "true"));
         for (Scene sc : scenes) {
+            if (cine) {
+                try {
+                    progress.accept("Cine IA escena " + sc.index + " (fondo con IA + personaje)...");
+                    CineIA.renderEscena(cfg, sc, script.title(), outDir);
+                    continue;
+                } catch (Exception e) {
+                    String msg = e.getMessage() == null ? "error" : e.getMessage().split("\\n")[0];
+                    progress.accept("AVISO: Cine IA falló en " + sc.index + " (" + msg
+                            + "). Usando animación clásica.");
+                }
+            }
             progress.accept("Animando escena " + sc.index + " (cuadro a cuadro)...");
             Animator.animate(cfg, sc, script.title(), clipsDir);
+        }
+
+        if (FreeAi.habilitado(cfg) && "true".equalsIgnoreCase(cfg.get("freeia.hook", "true"))) {
+            Path manual = clipsDir.resolve("hook.mp4");
+            if (Files.exists(manual) && Files.size(manual) > 10_000) {
+                progress.accept("Gancho animado (hook.mp4 descargado a mano, vía web gratis).");
+                Scene h = new Scene(-1, "Gancho", "");
+                h.video = manual.toString();
+                h.audioSeconds = FreeAi.duracionGancho(cfg);
+                h.scenario = "";
+                scenes.add(0, h);
+            } else {
+                progress.accept("Gancho animado (Free.ai)...");
+                Path hook = FreeAi.generarGancho(cfg, script.title(), clipsDir, progress);
+                if (hook != null) {
+                    Scene h = new Scene(-1, "Gancho", "");
+                    h.video = hook.toString();
+                    h.audioSeconds = FreeAi.duracionGancho(cfg);
+                    h.scenario = "";
+                    scenes.add(0, h);
+                } else {
+                    progress.accept("AVISO: sin gancho animado hoy (el video se sube igual, sin movimiento).");
+                }
+            }
         }
 
         progress.accept("Uniendo video final...");
@@ -85,6 +121,53 @@ public final class Pipeline {
                 }
                 """;
         return ScriptParser.parse(json);
+    }
+
+    /** Reconstruye la lista de escenas con su audio ya renderizado (sin volver a animar). */
+    public static java.util.List<Scene> scenesConAudio(Config cfg, Path outDir) throws Exception {
+        String raw = Files.readString(outDir.resolve("guion.json"));
+        ScriptParser.Script script = ScriptParser.parse(raw);
+        java.util.List<Scene> scenes = new java.util.ArrayList<>();
+        scenes.add(introScene());
+        scenes.addAll(script.scenes());
+        for (Scene sc : scenes) {
+            Path audio = outDir.resolve("audio").resolve("escena_" + sc.index + "_studio.mp3");
+            if (!Files.exists(audio)) {
+                throw new RuntimeException("Falta audio de escena " + sc.index + ": " + audio);
+            }
+            sc.audioFile = audio.toString();
+            sc.audioSeconds = AudioStudio.durationWithPause(cfg, audio);
+        }
+        return scenes;
+    }
+
+    /** Reconstruye el video FINAL a partir de merged.mp4 + audio + clips ya renderizados
+     *  (sin volver a animar ni sintetizar voces). Sirve para recuperar el video
+     *  original de calidad tras un re-encode accidental o para re-quemar subtítulos. */
+    public static ScriptParser.Script remontar(Config cfg, Path outDir, Consumer<String> progress) throws Exception {
+        String raw = Files.readString(outDir.resolve("guion.json"));
+        ScriptParser.Script script = ScriptParser.parse(raw);
+
+        List<Scene> scenes = new java.util.ArrayList<>();
+        scenes.add(introScene());
+        scenes.addAll(script.scenes());
+        for (Scene sc : scenes) {
+            Path audio = outDir.resolve("audio").resolve("escena_" + sc.index + "_studio.mp3");
+            if (!Files.exists(audio)) {
+                throw new RuntimeException("Falta audio de escena " + sc.index + ": " + audio);
+            }
+            sc.audioFile = audio.toString();
+            sc.audioSeconds = AudioStudio.durationWithPause(cfg, audio);
+            sc.video = outDir.resolve("clips").resolve(String.format("clip_%02d.mp4", sc.index)).toString();
+            if (!Files.exists(Paths.get(sc.video))) {
+                throw new RuntimeException("Falta clip " + sc.video);
+            }
+        }
+
+        progress.accept("Remontando video final...");
+        Path video = Assembler.assemble(cfg, scenes, outDir, script.title());
+        progress.accept("Listo: " + video.toString());
+        return script;
     }
 
     private Pipeline() {}

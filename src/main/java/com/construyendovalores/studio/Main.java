@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Locale;
 
 public final class Main {
 
@@ -31,9 +32,30 @@ public final class Main {
                     String valor = args[3];
                     if (args.length >= 5) cfg.set("video.scenario", args[4]);
                     String raw = Gemini.generateScript(cfg, tema, valor, 6);
-                    ScriptParser.Script s = ScriptParser.parse(GeminiParser.extractJson(raw));
+                    String guionJson = GeminiParser.extractJson(raw);
+                    ScriptParser.Script s = ScriptParser.parse(guionJson);
                     Path out = Paths.get(dir);
                     Pipeline.exec(cfg, s, out, System.out::println);
+                    Files.writeString(out.resolve("guion.json"), guionJson);
+                    if ("true".equalsIgnoreCase(cfg.get("calidad.auto", "true"))) {
+                        CalidadTotal.evaluar(cfg, out, null, System.out::println);
+                    }
+                    System.out.println("OK | " + out.toAbsolutePath());
+                    return;
+                }
+                case "--recuento" -> {
+                    String cuento = args[1];
+                    String dir = args[2];
+                    String valor = args.length >= 4 ? args[3] : Recuento.valorDe(cuento);
+                    String raw = Gemini.generateRetelling(cfg, cuento, valor, 5);
+                    String guionJson = GeminiParser.extractJson(raw);
+                    ScriptParser.Script s = ScriptParser.parse(guionJson);
+                    Path out = Paths.get(dir);
+                    Pipeline.exec(cfg, s, out, System.out::println);
+                    Files.writeString(out.resolve("guion.json"), guionJson);
+                    if ("true".equalsIgnoreCase(cfg.get("calidad.auto", "true"))) {
+                        CalidadTotal.evaluar(cfg, out, null, System.out::println);
+                    }
                     System.out.println("OK | " + out.toAbsolutePath());
                     return;
                 }
@@ -118,6 +140,138 @@ public final class Main {
                     System.out.println("Privacidad de las proximas subidas: " + p);
                     return;
                 }
+                case "--retitular" -> {
+                    boolean aplicar = false;
+                    boolean catalogo = false;
+                    for (int i = 1; i < args.length; i++) {
+                        if (args[i].equalsIgnoreCase("--aplicar")) aplicar = true;
+                        if (args[i].equalsIgnoreCase("--catalogo")) catalogo = true;
+                    }
+                    if (!Youtube.isLinked()) {
+                        System.out.println("Primero vincula el canal con --youtube-auth.");
+                        return;
+                    }
+                    java.util.Map<String, Integer> repetidos = new java.util.HashMap<>();
+                    int cambios = 0;
+                    for (String linea : Youtube.listMine(cfg, 50)) {
+                        String[] p = linea.split(" \\| ", 3);
+                        if (p.length < 3) continue;
+                        String id = p[0];
+                        String titulo = p[2];
+                        String nuevo = tituloMejorado(titulo);
+                        boolean cambiaTitulo = !nuevo.equals(titulo);
+                        if (!cambiaTitulo && !catalogo) continue;
+                        int rep = repetidos.merge(nuevo, 1, Integer::sum);
+                        if (rep > 1) nuevo = nuevo.replace(" #Shorts", " | Parte " + rep + " #Shorts");
+                        System.out.println(id + " | " + titulo);
+                        System.out.println("   -> " + nuevo + (cambiaTitulo ? "" : "   (solo categoría y etiquetas)"));
+                        if (aplicar) {
+                            try {
+                                Youtube.setMetadata(cfg, id, nuevo, etiquetasTitulo(nuevo),
+                                        cfg.get("youtube.categoryId", "27"));
+                                cambios++;
+                                Thread.sleep(400);
+                            } catch (Exception ex) {
+                                System.out.println("   FALLO: " + ex.getMessage().split("\\n")[0]);
+                            }
+                        }
+                    }
+                    System.out.println(aplicar
+                            ? "Listo. " + cambios + " videos actualizados."
+                            : "Vista previa. Para aplicar los cambios: --retitular --aplicar");
+                    if (!aplicar) {
+                        System.out.println("Para arreglar también categoría (27) y etiquetas de todo el catálogo: "
+                                + "--retitular --catalogo --aplicar");
+                    }
+                    return;
+                }
+                case "--estado" -> {
+                    int max = 5;
+                    if (args.length > 1) {
+                        try {
+                            max = Math.max(1, Integer.parseInt(args[1]));
+                        } catch (NumberFormatException ignored) {
+                            // usa el valor por defecto
+                        }
+                    }
+                    String hoy = java.time.LocalDate.now().toString();
+                    Path cola = Paths.get("C:\\Users\\Davia\\ConstruyendoValores\\videos_diarios");
+                    System.out.println("=== ESTADO DEL CANAL · " + java.time.LocalDateTime.now().withNano(0) + " ===");
+                    System.out.println("YouTube vinculado: " + (Youtube.isLinked() ? "si" : "NO (ejecuta --youtube-auth)"));
+                    System.out.println("Ultima subida (config): " + cfg.get("canal.lastUploadDate", "?")
+                            + " | videos=" + cfg.get("canal.videoCount", "?")
+                            + " | ultimo id=" + cfg.get("canal.lastVideoId", "?"));
+                    System.out.println("Privacidad por defecto: " + cfg.get("youtube.privacyStatus", "public"));
+                    System.out.println("Motor: TTS=" + cfg.get("tts.engine", "edge")
+                            + " | imagen=" + cfg.get("pollinations.model", "?")
+                            + " | cine=" + cfg.get("cine.habilitado", "true"));
+                    Path hoyDir = cola.resolve("Programadas").resolve(hoy);
+                    System.out.println("Cola de hoy: "
+                            + (Files.exists(hoyDir.resolve("dia.properties")) ? "SI (" + hoyDir + ")" : "no"));
+                    try (var dias = Files.list(cola.resolve("Programadas"))) {
+                        long pend = dias.filter(Files::isDirectory)
+                                .filter(d -> d.getFileName().toString().compareTo(hoy) >= 0)
+                                .count();
+                        System.out.println("Dias programados por delante: " + pend);
+                    } catch (Exception ignored) {
+                        // aun no existe la carpeta de programadas
+                    }
+                    if (!Youtube.isLinked()) {
+                        System.out.println("(Sin vinculo no puedo consultar estadisticas en linea.)");
+                        return;
+                    }
+                    try {
+                        System.out.println("Canal: " + Youtube.channelName(cfg) + " | " + Youtube.channelUrl(cfg));
+                        System.out.println("--- Ultimos videos ---");
+                        for (Youtube.Estadisticas e : Youtube.listEstadisticas(cfg, max)) {
+                            System.out.println(String.format(Locale.ROOT,
+                                    "%s | %s | %s | %d vistas | %d likes | %d comentarios | %s",
+                                    e.fecha(), e.estado(), e.titulo(), e.vistas(), e.meGusta(),
+                                    e.comentarios(), e.id()));
+                        }
+                    } catch (Exception ex) {
+                        System.out.println("No pude leer YouTube: " + ex.getMessage().split("\\n")[0]);
+                    }
+                    return;
+                }
+                case "--borrar" -> {
+                    if (!Youtube.isLinked()) {
+                        System.out.println("No vinculado: ejecuta --youtube-auth primero.");
+                        return;
+                    }
+                    Youtube.delete(cfg, args[1]);
+                    System.out.println("BORRADO | " + args[1]);
+                    return;
+                }
+                case "--subir" -> {
+                    Path v = Paths.get(args[1]);
+                    if (!Files.exists(v)) {
+                        System.out.println("No existe el video: " + v);
+                        return;
+                    }
+                    String titulo = args[2];
+                    String desc = args[3];
+                    String priv = args.length > 4 ? args[4].toLowerCase() : "public";
+                    if (!priv.equals("public") && !priv.equals("private") && !priv.equals("unlisted")) {
+                        System.out.println("Usa privacidad: public, private o unlisted");
+                        return;
+                    }
+                    List<String> tags = List.of();
+                    Path tagsPath = v.getParent().resolve("etiquetas.txt");
+                    if (Files.exists(tagsPath)) {
+                        tags = Files.readAllLines(tagsPath).stream().map(String::trim)
+                                .filter(s -> !s.isEmpty()).toList();
+                    }
+                    if (!Youtube.isLinked()) {
+                        System.out.println("No vinculado: ejecuta --youtube-auth primero.");
+                        return;
+                    }
+                    System.out.println("SUBIENDO | " + v.getFileName() + " | " + titulo + " | " + priv);
+                    Youtube.UploadResult r = Youtube.upload(cfg, v, titulo, desc, tags, null, priv,
+                            s -> System.out.println("   " + s));
+                    System.out.println("SUBIDO | " + r.url() + " | privacidad=" + r.privacyStatus());
+                    return;
+                }
                 case "--youtube-preview" -> {
                     Path v = Paths.get(args[1]);
                     if (!Files.exists(v)) {
@@ -127,6 +281,11 @@ public final class Main {
                     String t = args.length > 2 ? args[2] : "Demo API Construyendo Valores";
                     String d = args.length > 3 ? args[3]
                             : "Caso de uso del audit: subida de un video mediante la YouTube Data API v3 (OAuth 2.0, resumable).";
+                    String priv = args.length > 4 ? args[4].toLowerCase() : "private";
+                    if (!priv.equals("public") && !priv.equals("private") && !priv.equals("unlisted")) {
+                        System.out.println("Usa privacidad: public, private o unlisted");
+                        return;
+                    }
                     System.out.println("PASO 1/6  Verificando vinculo OAuth 2.0 ...");
                     if (!Youtube.isLinked()) {
                         System.out.println("   No vinculado todavia: ejecuta --youtube-auth primero.");
@@ -141,7 +300,7 @@ public final class Main {
                     System.out.println("PASO 3/6  Iniciando subida resumable ...");
                     System.out.println("PASO 4/6  Transfiriendo el video (multipart upload) ...");
                     Youtube.UploadResult r = Youtube.upload(cfg, v, t, d,
-                            List.of("construyendo valores", "infantil", "demo api"), null, "private",
+                            List.of("construyendo valores", "canciones infantiles", "música para niños"), null, priv,
                             s -> System.out.println("   " + s));
                     System.out.println("PASO 5/6  Video en la cuenta:");
                     for (String vv : Youtube.listMine(cfg, 5)) {
@@ -170,7 +329,7 @@ public final class Main {
                     return;
                 }
                 case "--shorts" -> {
-                    Path dir = Paths.get(args[1]);
+                    Path dir = Paths.get(args[1]).toAbsolutePath();
                     double dur = args.length >= 3 ? Double.parseDouble(args[2]) : 38;
                     try (var stream = Files.list(dir)) {
                         for (Path v : stream.filter(f -> f.toString().toLowerCase().endsWith(".mp4"))
@@ -432,6 +591,97 @@ public final class Main {
                     Metricas.refrescar(cfg, System.out::println);
                     return;
                 }
+                case "--mejora" -> {
+                    Path mej = CicloMejora.ejecutar(cfg, Paths.get(args[1]), System.out::println);
+                    System.out.println("MEJORA | " + mej.toAbsolutePath());
+                    String lecc = Competidores.barrerDiario(cfg, System.out::println);
+                    if (!lecc.isBlank()) System.out.println("LECCIONES | " + lecc.trim().replace("\n", " | "));
+                    Decisor.decidir(cfg, Paths.get(args[1]), System.out::println);
+                    return;
+                }
+                case "--competidores" -> {
+                    String lecc = Competidores.barrerDiario(cfg, System.out::println);
+                    if (!lecc.isBlank()) System.out.println(lecc);
+                    return;
+                }
+                case "--calidad" -> {
+                    IndiceCalidad.evaluar(cfg, Paths.get(args[1]), System.out::println);
+                    return;
+                }
+                case "--qa" -> {
+                    Path q = Paths.get(args[1]);
+                    Double esperado = args.length >= 3 ? Double.parseDouble(args[2]) : null;
+                    CalidadTotal.evaluar(cfg, q, esperado, System.out::println);
+                    return;
+                }
+                case "--voces" -> {
+                    List<String> voces = Voices.spanishVoices(cfg);
+                    System.out.println("VOCES | " + voces.size() + " voces es-* detectadas en edge-tts:");
+                    String[] preferidas = {"es-MX-DaliaNeural", "es-CO-GonzaloNeural", "es-MX-JorgeNeural",
+                            "es-CL-CatalinaNeural", "es-EC-AndreaNeural", "es-ES-ElviraNeural", "es-PE-AlexNeural"};
+                    for (String v : voces) {
+                        boolean ok = false;
+                        for (String p : preferidas) if (v.equals(p)) ok = true;
+                        System.out.println("  " + (ok ? "* " : "  ") + v);
+                    }
+                    System.out.println("  (*) recomendada por la investigación de carátula 2026");
+                    System.out.println("REPARTO ACTUAL:");
+                    for (String ch : Config.CHARACTER_VOICES.keySet()) {
+                        System.out.println("  " + ch + " -> " + cfg.voiceFor(ch));
+                    }
+                    return;
+                }
+                case "--supervision" -> {
+                    Path su = Paths.get(args[1]);
+                    Files.createDirectories(su);
+                    String lecciones = Competidores.barrerDiario(cfg, System.out::println);
+
+                    StringBuilder sv = new StringBuilder("# SUPERVISIÓN DIARIA DEL PROYECTO\n\n");
+                    sv.append("## Competencia (vistas/me gusta/comentarios)\n");
+                    sv.append(lecciones == null || lecciones.isBlank()
+                            ? "- (sin datos hoy: revisa la configuración de competidores)"
+                            : lecciones.replace("\n", "\n")).append('\n');
+
+                    if (CalidadTotal.existeVideoDirecto(su)) {
+                        CalidadTotal.evaluar(cfg, su, null, System.out::println);
+                        sv.append("\n## Informe de calidad de la última pieza\n");
+                        Path informe = su.resolve("informe_calidad.md");
+                        if (Files.exists(informe)) sv.append(Files.readString(informe)).append('\n');
+                        sv.append("\n## Mejoras para el próximo video\n");
+                        Path mejoras = su.resolve("mejoras_siguiente.md");
+                        if (Files.exists(mejoras)) sv.append(Files.readString(mejoras)).append('\n');
+                    } else {
+                        List<CalidadTotal.Informe> infos =
+                                CalidadTotal.evaluarRaiz(cfg, su, System.out::println);
+                        sv.append("\n## Estado de calidad de todas las producciones\n");
+                        if (infos.isEmpty()) {
+                            sv.append("- No se encontraron videos para evaluar.\n");
+                        } else {
+                            sv.append("| Producción | Índice | IA | Supera | APTO |\n|---|---|---|---|---|\n");
+                            for (CalidadTotal.Informe in : infos) {
+                                sv.append("| ").append(in.nombre())
+                                        .append(" | ").append(String.format(Locale.ROOT, "%.1f", in.indice())).append("/100")
+                                        .append(" | ").append(in.notaIA() == null ? "n/a"
+                                                : String.format(Locale.ROOT, "%.1f", in.notaIA()) + "/10")
+                                        .append(" | ").append(in.mejor() < 0 ? "n/a"
+                                                : in.superaAnterior() ? "SÍ" : "NO")
+                                        .append(" | ").append(in.apto() ? "SÍ" : "NO").append(" |\n");
+                            }
+                            sv.append("\nVer `informe_calidad.md` y `mejoras_siguiente.md` en cada carpeta.\n");
+                        }
+                    }
+                    sv.append("\n## Regla activa\n")
+                            .append("- Cada video debe superar al anterior (índice calidad.csv).\n")
+                            .append("- Si el QA marca error, no publicar hasta corregir.\n")
+                            .append("- Publicar solo lo que el veredicto apruebe como APTO.\n");
+                    Files.writeString(su.resolve("SUPERVISION.md"), sv.toString());
+                    System.out.println("SUPERVISION | " + su.resolve("SUPERVISION.md").toAbsolutePath());
+                    return;
+                }
+                case "--decidir" -> {
+                    Decisor.decidir(cfg, Paths.get(args[1]), System.out::println);
+                    return;
+                }
                 case "--preview" -> {
                     Path out = Paths.get(args[1]);
                     Files.createDirectories(out);
@@ -444,6 +694,212 @@ public final class Main {
                     System.out.println("PREVIEW | " + out.toAbsolutePath());
                     return;
                 }
+                case "--personaje" -> {
+                    String idea = args[1];
+                    Path dir = Paths.get(args[2]);
+                    Path md = PersonajeCreator.crear(cfg, idea, dir, System.out::println);
+                    System.out.println("PERSONAJE | " + md.toAbsolutePath());
+                    return;
+                }
+                case "--gancho" -> {
+                    String titulo = args[1];
+                    Path dir = Paths.get(args[2]);
+                    Path hook = FreeAi.generarGancho(cfg, titulo, dir.resolve("clips"), System.out::println);
+                    System.out.println(hook != null
+                            ? "GANCHO | " + hook.toAbsolutePath()
+                            : "GANCHO | no generado (revisa saldo/pool)");
+                    return;
+                }
+                case "--enganche" -> {
+                    Path video = Paths.get(args[1]);
+                    Path hook = Paths.get(args[2]);
+                    if (!Files.exists(hook)) {
+                        System.out.println("ENGANCHE | no existe el clip: " + hook.toAbsolutePath());
+                        return;
+                    }
+                    boolean ok = FreeAi.enganchar(cfg, video, hook);
+                    if (ok) {
+                        System.out.println("ENGANCHE | gancho cosido: " + video.toAbsolutePath());
+                        CalidadTotal.evaluar(cfg, video.getParent(), null, System.out::println);
+                    }
+                    return;
+                }
+                case "--ensamblar" -> {
+                    Path dir = Paths.get(args[1]);
+                    ScriptParser.Script sc2 = Pipeline.remontar(cfg, dir, System.out::println);
+                    System.out.println("ENSAMBLAR | videofinal restaurado para: " + sc2.title());
+                    CalidadTotal.evaluar(cfg, dir, null, System.out::println);
+                    return;
+                }
+                case "--prueba-cine" -> {
+                    Path dir = Paths.get(args[1]).toAbsolutePath();
+                    int idx = Integer.parseInt(args[2]);
+                    java.util.List<Scene> escs = Pipeline.scenesConAudio(cfg, dir);
+                    Scene sc = null;
+                    double offset = 0;
+                    for (Scene e : escs) {
+                        if (e.index == idx) { sc = e; break; }
+                        offset += Math.max(1.2, e.audioSeconds + 0.45);
+                    }
+                    if (sc == null) { System.out.println("No existe escena " + idx); return; }
+                    Path videoFinal = null;
+                    long best = 0;
+                    for (Path f : Files.list(dir).toList()) {
+                        String n = f.getFileName().toString().toLowerCase();
+                        if (n.endsWith(".mp4") && !n.contains("merged") && !n.contains("short")) {
+                            long sz = Files.size(f);
+                            if (sz > best) { best = sz; videoFinal = f; }
+                        }
+                    }
+                    if (videoFinal == null) { System.out.println("No hay video final"); return; }
+
+                    double tMuestra = Math.min(0.55, Math.max(1.2, sc.audioSeconds + 0.45) * 0.4);
+                    Path antes = dir.resolve("_cine_antes.jpg");
+                    Path nuevo = dir.resolve("_cine_nuevo.jpg");
+                    Path lado = dir.resolve("cine_antes_despues_esc" + idx + ".png");
+                    StringBuilder lg = new StringBuilder();
+                    Util.run(java.util.List.of(cfg.ffmpeg(), "-y", "-ss",
+                            String.format(java.util.Locale.US, "%.2f", offset + tMuestra),
+                            "-i", videoFinal.toString(), "-frames:v", "1",
+                            "-q:v", "2", "-y", antes.toString()), dir, lg);
+                    BufferedImage nuevoImg = Animator.frameFor(sc, "", tMuestra,
+                            "Intro".equalsIgnoreCase(sc.character), Math.max(1.2, sc.audioSeconds + 0.45));
+                    javax.imageio.ImageIO.write(nuevoImg, "jpg", nuevo.toFile());
+                    Util.run(java.util.List.of(cfg.ffmpeg(), "-y",
+                            "-i", antes.toString(), "-i", nuevo.toString(),
+                            "-filter_complex",
+                            "[0:v]scale=540:960:flags=lanczos[a];[1:v]scale=540:960:flags=lanczos[b];[a][b]hstack",
+                            "-frames:v", "1", lado.toString()), dir, lg);
+                    System.out.println("PRUEBA-CINE | antes vs despues (escena " + idx + "): "
+                            + lado.toAbsolutePath());
+                    return;
+                }
+                case "--imagen-probe" -> {
+                    Path out = Paths.get(args[1]);
+                    Files.createDirectories(out);
+                    System.out.println("PROBANDO | generando escena y personaje con las IAs disponibles...");
+                    Path esc = out.resolve("probe_escena.png");
+                    String p1 = "Fondo vacio para video infantil, animacion 3D premium tipo pelicula Pixar: "
+                            + "parque infantil con arboles, flores y un tobogan, ambiente alegre,"
+                            + " vista amplia, sin personajes, sin texto, sin marcas de agua";
+                    String r1 = ImagenIA.generar(cfg, p1, 720, 1280, 314159, "9:16", esc, System.out::println);
+                    System.out.println("  escena  -> " + (r1.isBlank() ? "FALLÓ" : "ok (" + r1 + ")") + " | " + esc.toAbsolutePath());
+                    Path per = out.resolve("probe_personaje.png");
+                    String p2 = "Personaje infantil, animacion 3D premium tipo pelicula Pixar: "
+                            + "Casquito, un caracol cartagenero maestro constructor con casco de obra, "
+                            + "sonrisa amable y caparazon amarillo-naranja, retrato de cuerpo completo "
+                            + "en blanco puro, sin sombras";
+                    String r2 = ImagenIA.generar(cfg, p2, 720, 1280, 2718, "9:16", per, System.out::println);
+                    System.out.println("  personaje -> " + (r2.isBlank() ? "FALLÓ" : "ok (" + r2 + ")") + " | " + per.toAbsolutePath());
+                    return;
+                }
+                case "--cine" -> {
+                    Path dir = Paths.get(args[1]).toAbsolutePath();
+                    cfg.set("cine.habilitado", "true");
+                    cfg.save();
+                    String raw = Util.read(dir.resolve("guion.json"));
+                    ScriptParser.Script script = ScriptParser.parse(raw);
+                    java.util.List<Scene> escs = Pipeline.scenesConAudio(cfg, dir);
+                    int k = 0;
+                    for (Scene sc : escs) {
+                        k++;
+                        System.out.println("CINE " + k + "/" + escs.size() + " | escena " + sc.index
+                                + " (" + sc.character + ")");
+                        long ini = System.currentTimeMillis();
+                        try {
+                            CineIA.renderEscena(cfg, sc, script.title(), dir);
+                        } catch (Exception e) {
+                            String msg = e.getMessage() == null ? "error" : e.getMessage().split("\\n")[0];
+                            System.out.println("   AVISO: cine fallo (" + msg + "). Animacion clasica.");
+                            Animator.animate(cfg, sc, script.title(), dir);
+                        }
+                        System.out.println("   ok en " + ((System.currentTimeMillis() - ini) / 1000) + "s");
+                    }
+                    System.out.println("CINE | ensamblando...");
+                    Path video = Assembler.assemble(cfg, escs, dir, script.title());
+                    System.out.println("CINE | " + video.toAbsolutePath());
+                    return;
+                }
+                case "--planificar" -> {
+                    Path pv = Paths.get(args[1]);
+                    String pt = args[2];
+                    String pd = args[3];
+                    java.time.LocalDate pf = java.time.LocalDate.parse(args[4]);
+                    Clipper.planificarUn(cfg, pv, pt, pd, pf);
+                    return;
+                }
+                case "--lanzar" -> {
+                    Path carp = args.length >= 2 ? Paths.get(args[1]) : Paths.get("clips_campana");
+                    java.time.LocalDate desde = args.length >= 3
+                            ? java.time.LocalDate.parse(args[2]) : null;
+                    int max = args.length >= 4 ? Integer.parseInt(args[3]) : 0;
+                    Clipper.lanzar(cfg, carp, desde, max);
+                    return;
+                }
+case "--clips-subir" -> {
+                    Path carp = args.length >= 2 ? Paths.get(args[1]) : Paths.get("clips_campana");
+                    int max = args.length >= 3 ? Integer.parseInt(args[2]) : 0;
+                    Clipper.subir(cfg, carp, max);
+                    return;
+                }
+                case "--escenas" -> {
+                    Path cd = Paths.get(args[1]);
+                    Path so = args.length >= 3 ? Paths.get(args[2]) : Paths.get("clips_campana");
+                    String tb = args.length >= 4 ? args[3] : null;
+                    int dm = args.length >= 5 ? Integer.parseInt(args[4]) : 20;
+                    Clipper.escenas(cfg, cd, so, tb, dm);
+                    return;
+                }
+                case "--clip" -> {
+                    Path video = Paths.get(args[1]);
+                    if (!Files.exists(video)) {
+                        System.out.println("No existe el video: " + video);
+                        return;
+                    }
+                    Path out = args.length >= 3 ? Paths.get(args[2]) : Paths.get("clips_campana");
+                    int n = args.length >= 4 ? Integer.parseInt(args[3]) : 6;
+                    double dur = args.length >= 5 ? Double.parseDouble(args[4]) : 40.0;
+                    Clipper.cortar(cfg, video, out, n, dur);
+                    return;
+                }
+                case "--portada" -> {
+                    String prompt = args[1];
+                    Path out = Paths.get(args[2]);
+                    Files.createDirectories(out);
+                    long seed = System.currentTimeMillis() % 1_000_000_000L;
+                    Path png = out.resolve("portada_AI_16x9.png");
+                    boolean ok = Pollinations.download(prompt, 1280, 720, seed, png);
+                    System.out.println(ok ? "PORTADA | " + png.toAbsolutePath()
+                            : "PORTADA | no se pudo generar (revisa red)");
+                    return;
+                }
+                case "--publicidad" -> {
+                    Path src = Paths.get(args[1]);
+                    Path dir = Paths.get(args[2]);
+                    Publicidad.generar(cfg, src, dir, System.out::println);
+                    return;
+                }
+                case "--ia-probe" -> {
+                    System.out.println("SANEO MULTI-IA | estado real de cada proveedor:");
+                    for (String id : MultiIA.orden(cfg)) {
+                        System.out.println("  - " + id + " -> " + MultiIA.probar(cfg, id));
+                    }
+                    return;
+                }
+                case "--ia-consulta" -> {
+                    String pregunta = String.join(" ", java.util.Arrays.copyOfRange(args, 1, args.length));
+                    System.out.println("PREGUNTA: " + pregunta);
+                    for (String id : MultiIA.orden(cfg)) {
+                        String r;
+                        try {
+                            r = MultiIA.llamarPublico(cfg, id, "", pregunta);
+                        } catch (Exception e) {
+                            r = "NO DISPONIBLE (" + (e.getMessage() == null ? "?" : e.getMessage().split("\\n")[0]) + ")";
+                        }
+                        System.out.println("\n--- [" + id + "] ---\n" + r);
+                    }
+                    return;
+                }
                 default -> SwingUtilities.invokeLater(() -> new MainFrame(new Config()).setVisible(true));
             }
         } catch (Exception e) {
@@ -451,6 +907,51 @@ public final class Main {
             if (e.getCause() != null) System.err.println("CAUSA: " + e.getCause().getMessage());
             System.exit(1);
         }
+    }
+
+    /**
+     * Reescribe un título con la fórmula que sí funciona en el canal.
+     * Solo toca los títulos con la plantilla genérica que dejaron los videos en 0-3 vistas
+     * ("en el mejor momento para ver en familia"); lo demás se deja igual.
+     */
+    static String tituloMejorado(String viejo) {
+        if (viejo == null) return null;
+        String low = viejo.toLowerCase(java.util.Locale.ROOT);
+        boolean filler = low.contains("en el mejor momento para ver en familia")
+                || low.contains("no dejes de ver el final")
+                || low.startsWith("la parte mas bonita de")
+                || low.startsWith("la parte más bonita de");
+        if (!filler) return viejo;
+
+        String t = viejo.replaceAll("(?i)\\s*#shorts\\s*$", "").trim();
+        t = t.replaceAll("(?i)\\s+en el mejor momento para ver en familia", "").trim();
+        t = t.replaceAll("(?i)^la parte m[áa]s bonita de\\s+", "").trim();
+        t = t.replaceAll("(?i)\\s*\\|\\s*no dejes de ver el final", "").trim();
+        t = t.replaceAll("[\\s|]+$", "").trim();
+        if (t.isEmpty()) return viejo;
+
+        String sufijo = t.toLowerCase(java.util.Locale.ROOT).contains("canci")
+                ? " | Canción infantil" : " | Cuento para niños";
+        String nuevo = t + sufijo;
+        if (nuevo.length() > 100) {
+            int corte = nuevo.lastIndexOf(' ', 99);
+            nuevo = nuevo.substring(0, corte > 0 ? corte : 100).trim();
+        }
+        return nuevo + " #Shorts";
+    }
+
+    /** Etiquetas temáticas para el catálogo (hoy todos los videos tienen solo "shorts"). */
+    static java.util.List<String> etiquetasTitulo(String titulo) {
+        java.util.List<String> t = new java.util.ArrayList<>();
+        t.add("cuento para niños");
+        t.add("cuentos infantiles");
+        t.add("valores para niños");
+        t.add("construyendo valores");
+        if (titulo != null && titulo.toLowerCase(java.util.Locale.ROOT).contains("canci")) {
+            t.add("canciones infantiles");
+        }
+        t.add("Shorts");
+        return t;
     }
 
     private Main() {}

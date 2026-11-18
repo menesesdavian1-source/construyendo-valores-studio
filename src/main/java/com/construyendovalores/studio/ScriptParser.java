@@ -32,9 +32,11 @@ public final class ScriptParser {
             String character = valueOf(obj, "character");
             String narration = valueOf(obj, "narration");
             String scenario = valueOf(obj, "scenario");
+            String emotion = valueOf(obj, "emotion");
             if (!narration.isBlank()) {
                 Scene sc = new Scene(scenes.size() + 1, character, narration);
                 sc.scenario = scenario;
+                sc.emotion = emotion.isBlank() ? "alegre" : emotion;
                 scenes.add(sc);
             }
             i = end + 1;

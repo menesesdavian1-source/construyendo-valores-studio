@@ -17,10 +17,10 @@ public final class Config {
 
     static {
         CHARACTER_VOICES.put("Intro", "es-MX-JorgeNeural");
-        CHARACTER_VOICES.put("Casquito", "es-MX-JorgeNeural");
+        CHARACTER_VOICES.put("Casquito", "es-CO-GonzaloNeural");
         CHARACTER_VOICES.put("Tito", "es-CO-GonzaloNeural");
         CHARACTER_VOICES.put("Sofía", "es-MX-DaliaNeural");
-        CHARACTER_VOICES.put("Nico", "es-AR-TomasNeural");
+        CHARACTER_VOICES.put("Nico", "es-MX-JorgeNeural");
         CHARACTER_VOICES.put("Narrador", "es-MX-JorgeNeural");
         CHARACTER_VOICES.put("Luna", "es-MX-DaliaNeural");
         CHARACTER_VOICES.put("Pipo", "es-MX-JorgeNeural");
@@ -80,6 +80,15 @@ public final class Config {
 
     public String get(String key, String def) {
         return props.getProperty(key, def);
+    }
+
+    /** Valor numérico con defecto (para calidad.movimiento y similares). */
+    public double getDouble(String key, double def) {
+        try {
+            return Double.parseDouble(get(key, "").replace(',', '.'));
+        } catch (Exception e) {
+            return def;
+        }
     }
 
     public void set(String key, String value) {

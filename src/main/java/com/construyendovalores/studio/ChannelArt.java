@@ -89,7 +89,7 @@ public final class ChannelArt {
         g.setFont(new Font("Arial", Font.BOLD, 64));
         g.setColor(new Color(255, 235, 130));
         String sl = slogan == null || slogan.isBlank()
-                ? "Construimos algo más importante que edificios: valores."
+                ? "Cuentos y canciones para aprender valores"
                 : slogan;
         FontMetrics fm = g.getFontMetrics();
         int tw = fm.stringWidth(sl);
