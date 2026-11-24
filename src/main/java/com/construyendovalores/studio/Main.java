@@ -391,11 +391,8 @@ public final class Main {
                 case "--guion-tech" -> {
                     TechLibrary.Historia h = TechLibrary.historiaByIdOrIndex(args[1]);
                     cfg.set("video.scenario", h.escenario());
-                    String ctx = "Historia de tecnologia para ninos. Personajes: Casquito (maestro, amable), "
-                            + "Tito (curioso e impaciente), Sofia (organizada), Nico (entusiasta), "
-                            + "Luna (conejita magica y asombrada), Pipo (perrito bromista que hace reir), "
-                            + "Tico (tortuga sabia que cuenta cuentos). "
-                            + "Narracion corta, una idea por escena, lenguaje sencillo, final con el valor ";
+                    String ctx = "Historia de tecnologia para ninos. Personajes: " + Reparto.fichas()
+                            + ". Narracion corta, una idea por escena, lenguaje sencillo, final con el valor ";
                     String raw = Gemini.generateScript(cfg, h.titulo(), h.valor() + " (" + ctx + ")", 5,
                             Scenario.fromId(h.escenario()).label);
                     String json = GeminiParser.extractJson(raw);
@@ -486,7 +483,7 @@ public final class Main {
                 case "--stills" -> {
                     Path out = Paths.get(args[1]);
                     Files.createDirectories(out);
-                    String[] chars = {"Casquito", "Tito", "Sofía", "Nico", "Luna", "Pipo", "Tico", "Bruno", "Memo", "Coco"};
+                    String[] chars = Reparto.ELENCO.toArray(new String[0]);
                     for (int i = 0; i < chars.length; i++) {
                         BufferedImage img = new BufferedImage(720, 1280, BufferedImage.TYPE_INT_RGB);
                         Graphics2D g = img.createGraphics();
@@ -522,7 +519,9 @@ public final class Main {
                     String[][] picks = {
                             {"Casquito", "¡Hola, amiguitos! Soy Casquito y te doy la bienvenida a Construyendo Valores. ¿Listos para construir y jugar?"},
                             {"Luna", "¡Hola! Soy Luna, la conejita de las estrellas. Vamos a soñar y a aprender juntos."},
-                            {"Pipo", "¡Jajajá! Yo soy Pipo y hoy venimos a reír y a cantar. ¿Nos acompañas?"}
+                            {"Pipo", "¡Jajajá! Yo soy Pipo y hoy venimos a reír y a cantar. ¿Nos acompañas?"},
+                            {"Rubí", "¡Respira hondo! Con valor, cualquier reto se vuelve pequeñito."},
+                            {"Lumi", "¡Mira! Hasta la luz más pequeña puede guiar el camino."}
                     };
                     for (String[] p : picks) {
                         String ch = p[0];
@@ -534,7 +533,7 @@ public final class Main {
                         sc.scenario = "parque";
                         Path sub = out.resolve(ch);
                         Files.createDirectories(sub);
-                        Animator.animate(cfg, sc, "Bienvenidos a Construyendo Valores", sub);
+                        Animator.animate(cfg, sc, "Construyendo Valores", sub);
                         System.out.println("MUESTRA | " + sc.video);
                     }
                     return;

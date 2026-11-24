@@ -17,6 +17,8 @@ public final class Prompt {
             - Bruno: camion volquete leal y fuerte que siempre ayuda al equipo (lealtad y trabajo en equipo).
             - Memo: buho sereno que cuenta cuentos para dormir y ensena a calmarse (calma y paciencia).
             - Coco: guacamaya alegre y valiente que canta y anima al equipo (valentia y alegria).
+            - Rubi: pequena dragona de escamas carmesis, dulce y valiente, que anima a todos a intentarlo (valentia).
+            - Lumi: luciernaga magica de brillo dorado, curiosa y serena, que ensena a observar (curiosidad y calma).
             Escribe como los canales infantiles premium: ritmo vertiginoso, emocion verdadera,
             onomatopeyas (¡CRASH!, ¡plash!, ¡rum!), y frases que un nino de 3-8 anos quiera repetir.
             """;
@@ -45,10 +47,11 @@ public final class Prompt {
                 + "- ESCENA 1 = EL GANCHO: en una sola frase corta provoca ya (pregunta, sorpresa u onomatopeya; ej. \"¡CRASH! ¿Se cayo su torre?\").\n"
                 + "- Arco obligatorio: PROBLEMA > INTENTO > FRACASO O MURO > NUEVA IDEA > TRIUNFO > MORALEJA.\n"
                 + "- Cada 'narration': UNA frase de 4 a 9 palabras, con verbo activo, palabras visuales y al menos una onomatopeya en todo el guion.\n"
-                + "- Alterna personajes, nunca dos frases seguidas del mismo.\n"
+                + "- Alterna personajes, nunca dos frases seguidas del mismo. Usa al menos 3 del elenco; "
+                + "no repitas siempre a Casquito.\n"
                 + "- 'emotion' por escena (con que energia se habla), una de: sorpresa, alegre, triste, curioso, asustado, enojado, tranquilo, orgulloso.\n"
                 + "- Escena final: Casquito dice la moraleja CLARA del valor y cierra con CTA: \"Da LIKE y suscribete\".\n"
-                + "- 'character' debe ser uno de: Casquito, Tito, Sofia, Nico, Luna, Pipo, Tico, Bruno, Memo, Coco, Narrador.\n"
+                + "- 'character' debe ser uno de: " + Reparto.nombres() + ".\n"
                 + "- Devuelve SOLO el JSON, sin comentarios ni texto extra.";
     }
 }

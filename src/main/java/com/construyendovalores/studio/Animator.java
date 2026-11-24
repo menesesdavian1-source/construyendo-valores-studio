@@ -21,9 +21,14 @@ import java.util.List;
  */
 public final class Animator {
 
+    // Raster nativo 1080x1920. Las coordenadas de dibujo son LOGICAS 720x1280:
+    // g.scale(1.5) las lleva al raster. Mezclar W/H (raster) con el escalado
+    // era lo que desplazaba y recortaba el cuadro (videos descentrados).
     private static final int W = 1080;
     private static final int H = 1920;
-    private static final double STAGE = 1.5; // dibujamos en espacio 720x1280 y rasterizamos a 1080x1920
+    private static final double STAGE = 1.5;
+    private static final int LW = 720;
+    private static final int LH = 1280;
     private static final int FPS = 25;
 
     public static void animate(Config cfg, Scene sc, String title, Path clipsDir) throws Exception {
@@ -104,21 +109,21 @@ public final class Animator {
         g.scale(STAGE, STAGE); // dibujamos en coordenadas de 720x1280, raster nativo 1080x1920
 
         double[] cam = cameraAt(sc.index, intro, t, dur);
-        g.translate(W / 2.0, H / 2.0);
+        g.translate(LW / 2.0, LH / 2.0);
         g.scale(cam[2], cam[2]);
-        g.translate(-W / 2.0 + cam[0], -H / 2.0 + cam[1]);
+        g.translate(-LW / 2.0 + cam[0], -LH / 2.0 + cam[1]);
 
         Color base = SceneImage.colorFor(sc.character);
-        GradientPaint sky = new GradientPaint(0, 0, SceneImage.lighten(base, 0.55f), 0, H, base.darker());
+        GradientPaint sky = new GradientPaint(0, 0, SceneImage.lighten(base, 0.55f), 0, LH, base.darker());
         g.setPaint(sky);
-        g.fillRect(0, 0, W, H);
-        g.setPaint(new GradientPaint(0, H * 0.55f, new Color(0, 0, 0, 0), 0, H, new Color(40, 20, 60, 52)));
-        g.fillRect(0, 0, W, H);
+        g.fillRect(0, 0, LW, LH);
+        g.setPaint(new GradientPaint(0, LH * 0.55f, new Color(0, 0, 0, 0), 0, LH, new Color(40, 20, 60, 52)));
+        g.fillRect(0, 0, LW, LH);
 
         drawSun(g);
         drawClouds(g, t);
         Scenario scen = intro ? Scenario.OBRA : Scenario.fromId(sc.scenario);
-        scen.paint(g, W, H, sc.index, t);
+        scen.paint(g, LW, LH, sc.index, t);
 
         int bottomY = 990;
         if (intro) {
@@ -128,7 +133,7 @@ public final class Animator {
             drawBigWord(g, sc, dur > 0 ? t / dur : 0);
         }
 
-        Actor.draw(g, W / 2, bottomY, t, 1.15, base, Actor.moodFor(sc.index), sc.index % 2 == 0, Actor.designFor(sc.character));
+        Actor.draw(g, LW / 2, bottomY, t, 1.15, base, Actor.moodFor(sc.index), sc.index % 2 == 0, Actor.designFor(sc.character));
         if (intro) drawConfetti(g, t);
         grade(g);
         drawVignette(g);
@@ -139,7 +144,7 @@ public final class Animator {
 
     /** Corrección de color cinematográfica suave: sombras tibias / luces frías. */
     private static void grade(Graphics2D g) {
-        int w = W, h = H;
+        int w = LW, h = LH;
         g.setComposite(java.awt.AlphaComposite.SrcOver.derive(0.085f));
         g.setPaint(new GradientPaint(0, h * 0.32f, new Color(255, 150, 70), 0, h, new Color(90, 40, 10)));
         g.fillRect(0, 0, w, (int) (h * 0.62f));
@@ -162,18 +167,18 @@ public final class Animator {
         g.scale(STAGE, STAGE);
 
         double[] cam = cameraAt(sc.index, false, t, Math.max(1.2, sc.audioSeconds + 0.45));
-        g.translate(W / 2.0, H / 2.0);
+        g.translate(LW / 2.0, LH / 2.0);
         g.scale(cam[2], cam[2]);
-        g.translate(-W / 2.0 + cam[0], -H / 2.0 + cam[1]);
+        g.translate(-LW / 2.0 + cam[0], -LH / 2.0 + cam[1]);
 
         Color base = SceneImage.colorFor(sc.character);
-        GradientPaint sky = new GradientPaint(0, 0, SceneImage.lighten(base, 0.55f), 0, H, base.darker());
+        GradientPaint sky = new GradientPaint(0, 0, SceneImage.lighten(base, 0.55f), 0, LH, base.darker());
         g.setPaint(sky);
-        g.fillRect(0, 0, W, H);
+        g.fillRect(0, 0, LW, LH);
 
         drawSun(g);
         drawClouds(g, t * 1.3);
-        Scenario.fromId(sc.scenario).paint(g, W, H, sc.index, t);
+        Scenario.fromId(sc.scenario).paint(g, LW, LH, sc.index, t);
 
         String hdr = "CONSTRUYENDO VALORES · CANCIÓN";
         g.setFont(new Font("Arial", Font.BOLD, 27));
@@ -187,14 +192,14 @@ public final class Animator {
             String tt = title.length() > 30 ? title.substring(0, 30) + "…" : title;
             int tw = fm.stringWidth(tt);
             g.setColor(new Color(20, 20, 40, 200));
-            g.fillRoundRect((W - tw) / 2 - 22, 104, tw + 44, 54, 16, 16);
+            g.fillRoundRect((LW - tw) / 2 - 22, 104, tw + 44, 54, 16, 16);
             g.setColor(new Color(255, 235, 130));
-            g.drawString(tt, (W - tw) / 2, 140);
+            g.drawString(tt, (LW - tw) / 2, 140);
         }
 
         double lift = karaokeLift(sc, t);
         int step = sc.index;
-        String[] pals = {"Casquito", "Sofía", "Tito", "Nico", "Luna", "Pipo", "Tico", "Bruno", "Memo", "Coco"};
+        String[] pals = Reparto.ELENCO.toArray(new String[0]);
         double[] fx = {0.07, 0.19, 0.31, 0.43, 0.57, 0.69, 0.81, 0.93};
         int[] fy = {875, 875, 875, 875, 875, 875, 875, 875};
         double[] fs = {0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50, 0.50};
@@ -202,14 +207,14 @@ public final class Animator {
             double ph = (i % 2) == 0 ? lift : lift * 0.55;
             g.translate(0, -ph);
             String ch = pals[(i + step) % pals.length];
-            Actor.draw(g, (int) (W * fx[i]), fy[i], t, fs[i],
+            Actor.draw(g, (int) (LW * fx[i]), fy[i], t, fs[i],
                     SceneImage.colorFor(ch), moodForIndex(i + step), (i % 2) == 0,
                     Actor.designFor(ch));
             g.translate(0, ph);
         }
         g.translate(0, -lift);
         String lead = pals[(step + 4) % pals.length];
-        Actor.draw(g, (int) (W * 0.50), 1085, t, 1.05,
+        Actor.draw(g, (int) (LW * 0.50), 1085, t, 1.05,
                 SceneImage.colorFor(lead), 0, true, Actor.designFor(lead));
         g.translate(0, lift);
 
@@ -243,12 +248,12 @@ public final class Animator {
     private static void drawMusicNotes(Graphics2D g, double t) {
         g.setFont(new Font("Arial", Font.BOLD, 42));
         for (int i = 0; i < 6; i++) {
-            double x = (i * 137 + t * 55) % (W + 80) - 40;
+            double x = (i * 137 + t * 55) % (LW + 80) - 40;
             double y = 220 + (i % 3) * 120 + Math.sin(t * 2 + i) * 18;
             g.setColor(new Color(255, 255, 255, 150));
             g.drawString("♪", (int) x, (int) y);
             g.setColor(new Color(255, 235, 130, 120));
-            g.drawString("♪", (int) ((x + 240) % W), (int) ((y + 60) % 560 + 220));
+            g.drawString("♪", (int) ((x + 240) % LW), (int) ((y + 60) % 560 + 220));
         }
         drawConfetti(g, t * 0.7);
     }
@@ -257,17 +262,17 @@ public final class Animator {
         String txt = sc.karaokeText == null ? "" : sc.karaokeText.trim();
         if (txt.isBlank()) return;
         double pulse = beatPhase(sc, t) < 0.6 ? 1 + 0.05 * Math.exp(-6 * beatPhase(sc, t)) : 1;
-        int cx = W / 2;
+        int cx = LW / 2;
         int cy = 1130;
         g.translate(cx, cy);
         g.scale(pulse, pulse);
         g.translate(-cx, -cy);
 
         g.setColor(new Color(15, 15, 35, 225));
-        g.fillRoundRect(40, 1030, W - 80, 200, 40, 40);
+        g.fillRoundRect(40, 1030, LW - 80, 200, 40, 40);
         g.setColor(new Color(255, 200, 60));
         g.setStroke(new BasicStroke(6f));
-        g.drawRoundRect(40, 1030, W - 80, 200, 40, 40);
+        g.drawRoundRect(40, 1030, LW - 80, 200, 40, 40);
 
         String[] words = txt.split("\\s+");
         int cur = currentWord(sc, t, words.length);
@@ -282,7 +287,7 @@ public final class Animator {
             String w = words[i];
             boolean isCur = i == cur;
             int ww = isCur ? fmc.stringWidth(w) : fm.stringWidth(w);
-            if (x + ww > W - 66) { y += 74; x = 66; }
+            if (x + ww > LW - 66) { y += 74; x = 66; }
             if (y > 1195) break;
             if (isCur) {
                 g.setFont(fCur);
@@ -333,7 +338,7 @@ public final class Animator {
     }
 
     private static void drawSun(Graphics2D g) {
-        int cx = W - 155;
+        int cx = LW - 155;
         int cy = 165;
         int r = 92;
         RadialGradientPaint glow = new RadialGradientPaint(cx, cy, r * 1.7f,
@@ -354,7 +359,7 @@ public final class Animator {
     private static void drawClouds(Graphics2D g, double t) {
         for (int i = 0; i < 3; i++) {
             double speed = 12 + i * 8;
-            double x = (i * 260 + t * speed) % (W + 420) - 210;
+            double x = (i * 260 + t * speed) % (LW + 420) - 210;
             int y = 92 + i * 130;
             int[] puffs = {90, 74, 84};
             int[] dx = {0, 44, 100};
@@ -374,11 +379,11 @@ public final class Animator {
     }
 
     private static void drawVignette(Graphics2D g) {
-        RadialGradientPaint v = new RadialGradientPaint(W / 2f, H / 2f, H * 0.78f,
+        RadialGradientPaint v = new RadialGradientPaint(LW / 2f, LH / 2f, LH * 0.78f,
                 new float[]{0f, 0.78f, 1f},
                 new Color[]{new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(16, 10, 30, 68)});
         g.setPaint(v);
-        g.fillRect(0, 0, W, H);
+        g.fillRect(0, 0, LW, LH);
     }
 
     private static void drawCaption(Graphics2D g, String title, Scene sc) {
@@ -396,9 +401,9 @@ public final class Animator {
             String t = title.length() > 34 ? title.substring(0, 34) : title;
             int tw = fm.stringWidth(t);
             g.setColor(new Color(20, 20, 40, 200));
-            g.fillRoundRect((W - tw) / 2 - 26, 120, tw + 52, 60, 16, 16);
+            g.fillRoundRect((LW - tw) / 2 - 26, 120, tw + 52, 60, 16, 16);
             g.setColor(Color.WHITE);
-            g.drawString(t, (W - tw) / 2, 158);
+            g.drawString(t, (LW - tw) / 2, 158);
         }
 
         if (sc.character != null && !sc.character.isBlank()) {
@@ -407,15 +412,15 @@ public final class Animator {
             String who = "Dice " + sc.character;
             FontMetrics fm = g.getFontMetrics();
             int tw = fm.stringWidth(who);
-            g.fillRoundRect((W - tw) / 2 - 20, 200, tw + 40, 52, 14, 14);
+            g.fillRoundRect((LW - tw) / 2 - 20, 200, tw + 40, 52, 14, 14);
             g.setColor(Color.WHITE);
-            g.drawString(who, (W - tw) / 2, 233);
+            g.drawString(who, (LW - tw) / 2, 233);
         }
     }
 
     private static void drawIntroCard(Graphics2D g, double t) {
         g.setColor(new Color(20, 20, 40, 230));
-        g.fillRoundRect(60, 460, W - 120, 480, 44, 44);
+        g.fillRoundRect(60, 460, LW - 120, 480, 44, 44);
 
         String t1 = "CONSTRUYENDO";
         String t2 = "VALORES";
@@ -423,27 +428,27 @@ public final class Animator {
         g.setColor(Color.WHITE);
         FontMetrics fm = g.getFontMetrics();
         int w1 = fm.stringWidth(t1);
-        g.drawString(t1, (W - w1) / 2, 620);
+        g.drawString(t1, (LW - w1) / 2, 620);
 
         g.setFont(new Font("Arial", Font.BOLD, 110));
         fm = g.getFontMetrics();
         int w2 = fm.stringWidth(t2);
         g.setColor(new Color(255, 235, 130));
-        g.drawString(t2, (W - w2) / 2, 780);
+        g.drawString(t2, (LW - w2) / 2, 780);
 
         g.setFont(new Font("Arial", Font.BOLD, 26));
         fm = g.getFontMetrics();
         String tag = "Aprendemos valores mientras construimos";
         int wt = fm.stringWidth(tag);
         g.setColor(new Color(220, 220, 230));
-        g.drawString(tag, (W - wt) / 2, 896);
+        g.drawString(tag, (LW - wt) / 2, 896);
     }
 
     private static void drawConfetti(Graphics2D g, double t) {
         g.setColor(new Color(255, 200, 60));
         for (int i = 0; i < 26; i++) {
-            double x = (i * 97 + t * 60) % W;
-            double y = ((i * 113) + t * (70 + i % 5 * 22)) % (H - 200);
+            double x = (i * 97 + t * 60) % LW;
+            double y = ((i * 113) + t * (70 + i % 5 * 22)) % (LH - 200);
             double s = 7 + (i % 3) * 3;
             if (i % 4 == 0) g.setColor(new Color(255, 120, 120));
             else if (i % 4 == 1) g.setColor(new Color(120, 200, 120));
@@ -461,7 +466,7 @@ public final class Animator {
         double s = 0.35 + 0.65 * (1 - Math.pow(1 - pop, 3));
 
         String w = sc.bigWord.trim();
-        int maxW = W - 120;
+        int maxW = LW - 120;
         Font afont = new Font("Arial", Font.BOLD, 84);
         g.setFont(afont);
         String[] lines = wrapBig(w, g.getFontMetrics(), maxW);
@@ -477,11 +482,11 @@ public final class Animator {
         int panelW = maxW + 56;
         int panelH = (sc.listNumber > 0 ? 34 : 0) + lines.length * lh + 26;
 
-        g.translate(W / 2, 470);
+        g.translate(LW / 2, 470);
         g.scale(s, s);
-        g.translate(-W / 2, -470);
+        g.translate(-LW / 2, -470);
 
-        int px = (W - panelW) / 2;
+        int px = (LW - panelW) / 2;
         int py = 470 - panelH / 2 - 30;
 
         g.setColor(new Color(15, 15, 35, 232));
@@ -505,13 +510,13 @@ public final class Animator {
         ty += lh - fm.getHeight() + 4;
         g.setColor(Color.WHITE);
         for (String line : lines) {
-            g.drawString(line, (W - fm.stringWidth(line)) / 2, ty);
+            g.drawString(line, (LW - fm.stringWidth(line)) / 2, ty);
             ty += lh;
         }
 
-        g.translate(W / 2, 470);
+        g.translate(LW / 2, 470);
         g.scale(1 / s, 1 / s);
-        g.translate(-W / 2, -470);
+        g.translate(-LW / 2, -470);
     }
 
     private static String[] wrapBig(String s, FontMetrics fm, int maxW) {
@@ -536,7 +541,7 @@ public final class Animator {
                 javax.imageio.ImageIO.getImageWritersBySuffix("jpg").next();
         javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
         param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
-        param.setCompressionQuality(0.95f);
+        param.setCompressionQuality(0.98f);
         try (javax.imageio.stream.ImageOutputStream ios =
                      javax.imageio.ImageIO.createImageOutputStream(out.toFile())) {
             writer.setOutput(ios);
@@ -553,7 +558,7 @@ public final class Animator {
         List<String> cmd = List.of(ffmpeg, "-y", "-framerate", String.valueOf(FPS),
                 "-i", pattern, "-i", sc.audioFile,
                 "-t", String.format(java.util.Locale.US, "%.2f", dur),
-                "-c:v", "libx264", "-preset", "veryfast", "-crf", "24",
+                "-c:v", "libx264", "-preset", "medium", "-crf", "20",
                 "-pix_fmt", "yuv420p", "-r", String.valueOf(FPS),
                 "-c:a", "aac", "-b:a", "128k",
                 clip.toString());

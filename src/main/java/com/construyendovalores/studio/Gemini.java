@@ -25,8 +25,8 @@ public final class Gemini {
         String prompt = "Reescribe el cuento clasico '" + cuento + "' como un guion ORIGINAL para un "
                 + "canal infantil de YouTube (este cuento es de dominio publico, pero debes narrar la historia "
                 + "con tus propias palabras, nunca copiar una traduccion existente).\n"
-                + "Usa la pandilla del canal como personajes (Casquito el maestro, Tito y Nico los ninos, "
-                + "Luna, Pipo, Tico y Sofia). Manten la trama clasica reconocible, reduce el tono de peligro "
+                + "Usa la pandilla del canal como personajes (" + Reparto.nombres()
+                + "). Manten la trama clasica reconocible, reduce el tono de peligro "
                 + "para edad preescolar y termina ensenando este valor: " + valor + ".\n"
                 + "Devuelve UNICAMENTE un JSON con estas claves exactas:\n"
                 + "video_title (titulo del video), description, scenes (array de escenas, cada una con "

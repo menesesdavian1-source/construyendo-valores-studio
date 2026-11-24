@@ -68,26 +68,41 @@ public final class Youtube {
         server.createContext("/", ex -> {
             String q = ex.getRequestURI().getRawQuery();
             String got = null;
+            String err = null;
             if (q != null) {
                 for (String p : q.split("&")) {
                     if (p.startsWith("code=")) {
                         got = p.substring(5);
-                        break;
+                    } else if (p.startsWith("error=")) {
+                        err = java.net.URLDecoder.decode(p.substring(6), StandardCharsets.UTF_8);
                     }
                 }
             }
-            byte[] body = (got == null
-                    ? "Error de autorización. Cierra esta pestaña y revisa la app."
-                    : "Autorizado. Ya puedes cerrar esta pestaña y volver a la app.").getBytes(StandardCharsets.UTF_8);
+            boolean finished = got != null || err != null;
+            String page;
             if (got != null) {
+                page = "Autorizado. Ya puedes cerrar esta pestaña y volver a la app.";
                 code[0] = got;
+            } else if (err != null) {
+                page = "Google rechazó la autorización: " + err
+                        + ". Vuelve a ejecutar --youtube-auth e inténtalo de nuevo.";
+                log.accept("Google devolvió error de autorización: " + err);
+            } else {
+                // Una visita al callback sin parametros (prefetch, antivirus o enlace abierto
+                // a mano) no debe cerrar la espera: Google todavia no ha respondido.
+                page = "Esta pagina es solo el retorno de la autorizacion. "
+                        + "Vuelve a la pestana de Google y pulsa Permitir.";
+                log.accept("Aviso: visita al retorno sin codigo de Google; se ignora.");
             }
+            byte[] body = page.getBytes(StandardCharsets.UTF_8);
             ex.getResponseHeaders().add("Content-Type", "text/html; charset=utf-8");
             ex.sendResponseHeaders(200, body.length);
             try (OutputStream os = ex.getResponseBody()) {
                 os.write(body);
             }
-            latch.countDown();
+            if (finished) {
+                latch.countDown();
+            }
         });
         server.start();
 
@@ -243,6 +258,15 @@ public final class Youtube {
         String at = accessToken(cfg);
         long size = Files.size(video);
         String asked = privacyStatus == null ? "private" : privacyStatus;
+
+        // Red de seguridad: la API rechaza publishAt con menos de 2 h de margen (400 invalidPublishAt).
+        if (publishAt != null) {
+            OffsetDateTime minimo = OffsetDateTime.now().plusHours(2).plusMinutes(5);
+            if (publishAt.isBefore(minimo)) {
+                publishAt = minimo.withSecond(0).withNano(0).plusMinutes(1);
+                log.accept("AVISO: hora de publicación demasiado próxima; ajustada a " + publishAt);
+            }
+        }
 
         // YouTube solo permite programar (publishAt) con privacyStatus "private": el video se
         // publica automáticamente cuando llega la hora. Si no se programa, se usa la privacidad

@@ -120,7 +120,7 @@ public final class SemanaVideo {
         List<String> tags = new ArrayList<>(DailyVideo.tagsOf(r.etiquetas() != null ? r.etiquetas() : ""));
         tags.add("Construyendo Valores");
         tags.add("canciones para niños");
-        dia.setProperty("archivo", r.titulo() + ".mp4");
+        dia.setProperty("archivo", Util.safeName(r.titulo()) + ".mp4");
         dia.setProperty("desc", DailyVideo.rondaDescription(r));
         dia.setProperty("tags", String.join(",", tags));
         dia.setProperty("post.canal.rondaIndex", String.valueOf((n % RondaLibrary.clasicas().size()) + 1));
@@ -147,7 +147,7 @@ public final class SemanaVideo {
             script = Pipeline.example();
         }
         Pipeline.exec(cfg, script, dayDir, s -> { });
-        dia.setProperty("archivo", script.title() + ".mp4");
+        dia.setProperty("archivo", Util.safeName(script.title()) + ".mp4");
         dia.setProperty("desc", DailyVideo.descOf(row));
         dia.setProperty("tags", String.join(",", DailyVideo.tagsOf(row.etiquetas() != null ? row.etiquetas() : "")));
         dia.setProperty("post.canal.videoIndex", String.valueOf((idx % plan.size()) + 1));
@@ -164,7 +164,7 @@ public final class SemanaVideo {
                 TechVideo.buildListicle(cfg, l, dayDir, s -> { });
                 List<String> tags = new ArrayList<>(DailyVideo.tagsOf(l.etiquetas() != null ? l.etiquetas() : ""));
                 tags.add("tecnología para niños");
-                dia.setProperty("archivo", l.titulo() + ".mp4");
+                dia.setProperty("archivo", Util.safeName(l.titulo()) + ".mp4");
                 dia.setProperty("desc", l.valor() + ". " + l.intro() + "\n\nTecnología e historia para niños: "
                         + "inventos que cambian el mundo.\n" + l.etiquetas());
                 dia.setProperty("tags", String.join(",", tags));
@@ -178,7 +178,7 @@ public final class SemanaVideo {
                 TechVideo.buildTrivia(cfg, t, dayDir, s -> { });
                 List<String> tags = new ArrayList<>(DailyVideo.tagsOf(t.etiquetas() != null ? t.etiquetas() : ""));
                 tags.add("adivinanzas para niños");
-                dia.setProperty("archivo", t.titulo() + ".mp4");
+                dia.setProperty("archivo", Util.safeName(t.titulo()) + ".mp4");
                 dia.setProperty("desc", t.valor() + ". Adivina el invento antes de que aparezca la respuesta.\n\n"
                         + "Tecnología e historia para niños.\n" + t.etiquetas());
                 dia.setProperty("tags", String.join(",", tags));
@@ -193,7 +193,7 @@ public final class SemanaVideo {
                 RondaVideo.build(cfg, r, dayDir, s -> { });
                 List<String> tags = new ArrayList<>(DailyVideo.tagsOf(r.etiquetas() != null ? r.etiquetas() : ""));
                 tags.add("canciones de tecnología para niños");
-                dia.setProperty("archivo", r.titulo() + ".mp4");
+                dia.setProperty("archivo", Util.safeName(r.titulo()) + ".mp4");
                 dia.setProperty("desc", r.descripcion() + "\n\nRonda de tecnología para cantar y bailar.\n"
                         + "Construyendo Valores: construimos algo más importante que edificios: valores.\n"
                         + r.etiquetas());
@@ -218,7 +218,7 @@ public final class SemanaVideo {
                 Pipeline.exec(cfg, script, dayDir, s -> { });
                 List<String> tags = new ArrayList<>(DailyVideo.tagsOf(h.etiquetas() != null ? h.etiquetas() : ""));
                 tags.add("historia de la tecnología para niños");
-                dia.setProperty("archivo", script.title() + ".mp4");
+                dia.setProperty("archivo", Util.safeName(script.title()) + ".mp4");
                 dia.setProperty("desc", h.valor() + ". Historia de la tecnología para niños.\n\n"
                         + h.datoClave() + "\n" + h.etiquetas());
                 dia.setProperty("tags", String.join(",", tags));
@@ -237,7 +237,7 @@ public final class SemanaVideo {
                 int i = st.get("canal.seriePregunta");
                 TechLibrary.Trivia t = SerieLibrary.preguntaByIndex(i);
                 TechVideo.buildTrivia(cfg, t, dayDir, s -> { });
-                dia.setProperty("archivo", t.titulo() + ".mp4");
+                dia.setProperty("archivo", Util.safeName(t.titulo()) + ".mp4");
                 dia.setProperty("desc", SerieLibrary.preguntaDesc(t));
                 dia.setProperty("tags", String.join(",", SerieLibrary.preguntaTags(t)));
                 dia.setProperty("post.canal.seriePregunta", String.valueOf(i + 1));
@@ -252,7 +252,7 @@ public final class SemanaVideo {
                 ScriptParser.Script script = new ScriptParser.Script(cTitle, base.description(), base.scenes());
                 cfg.set("video.scenario", SerieLibrary.scenarioOf(base, "parque"));
                 Pipeline.exec(cfg, script, dayDir, s -> { });
-                dia.setProperty("archivo", cTitle + ".mp4");
+                dia.setProperty("archivo", Util.safeName(cTitle) + ".mp4");
                 dia.setProperty("desc", SerieLibrary.titoDesc(cTitle, base.title()));
                 dia.setProperty("tags", String.join(",", SerieLibrary.titoTags()));
                 dia.setProperty("post.canal.serieTito", String.valueOf(i + 1));
@@ -265,7 +265,7 @@ public final class SemanaVideo {
                 ScriptParser.Script script = SerieLibrary.inventorByIndex(i);
                 cfg.set("video.scenario", SerieLibrary.scenarioOf(script, "taller"));
                 Pipeline.exec(cfg, script, dayDir, s -> { });
-                dia.setProperty("archivo", script.title() + ".mp4");
+                dia.setProperty("archivo", Util.safeName(script.title()) + ".mp4");
                 dia.setProperty("desc", SerieLibrary.inventorDesc(script));
                 dia.setProperty("tags", String.join(",", SerieLibrary.inventorTags()));
                 dia.setProperty("post.canal.serieInventor", String.valueOf(i + 1));
@@ -277,7 +277,7 @@ public final class SemanaVideo {
                 Ronda r = SerieLibrary.cantonByIndex(i);
                 cfg.set("video.scenario", r.escenario());
                 RondaVideo.build(cfg, r, dayDir, s -> { });
-                dia.setProperty("archivo", r.titulo() + ".mp4");
+                dia.setProperty("archivo", Util.safeName(r.titulo()) + ".mp4");
                 dia.setProperty("desc", SerieLibrary.cantaDesc(r));
                 dia.setProperty("tags", String.join(",", SerieLibrary.cantaTags(r)));
                 dia.setProperty("post.canal.serieCanta", String.valueOf(i + 1));
@@ -289,7 +289,7 @@ public final class SemanaVideo {
                 Ronda r = SerieLibrary.retoByIndex(i);
                 cfg.set("video.scenario", r.escenario());
                 RondaVideo.build(cfg, r, dayDir, s -> { });
-                dia.setProperty("archivo", r.titulo() + ".mp4");
+                dia.setProperty("archivo", Util.safeName(r.titulo()) + ".mp4");
                 dia.setProperty("desc", SerieLibrary.retoDesc(r));
                 dia.setProperty("tags", String.join(",", SerieLibrary.retoTags(r)));
                 dia.setProperty("post.canal.serieReto", String.valueOf(i + 1));

@@ -16,54 +16,62 @@ public final class Config {
     public static final Map<String, String> CHARACTER_VOICES = new LinkedHashMap<>();
 
     static {
+        // Voces neurales distintas por personaje: se reconocen sin exagerar tono/ritmo.
         CHARACTER_VOICES.put("Intro", "es-MX-JorgeNeural");
         CHARACTER_VOICES.put("Casquito", "es-CO-GonzaloNeural");
-        CHARACTER_VOICES.put("Tito", "es-CO-GonzaloNeural");
+        CHARACTER_VOICES.put("Tito", "es-PE-AlexNeural");
         CHARACTER_VOICES.put("Sofía", "es-MX-DaliaNeural");
-        CHARACTER_VOICES.put("Nico", "es-MX-JorgeNeural");
+        CHARACTER_VOICES.put("Nico", "es-CR-JuanNeural");
         CHARACTER_VOICES.put("Narrador", "es-MX-JorgeNeural");
-        CHARACTER_VOICES.put("Luna", "es-MX-DaliaNeural");
+        CHARACTER_VOICES.put("Luna", "es-CO-SalomeNeural");
         CHARACTER_VOICES.put("Pipo", "es-MX-JorgeNeural");
-        CHARACTER_VOICES.put("Tico", "es-CO-GonzaloNeural");
-        CHARACTER_VOICES.put("Bruno", "es-CO-GonzaloNeural");
-        CHARACTER_VOICES.put("Memo", "es-MX-JorgeNeural");
-        CHARACTER_VOICES.put("Coco", "es-MX-BeatrizNeural");
+        CHARACTER_VOICES.put("Tico", "es-ES-AlvaroNeural");
+        CHARACTER_VOICES.put("Bruno", "es-AR-TomasNeural");
+        CHARACTER_VOICES.put("Memo", "es-UY-MateoNeural");
+        CHARACTER_VOICES.put("Coco", "es-CO-SalomeNeural");
+        CHARACTER_VOICES.put("Rubí", "es-MX-DaliaNeural");
+        CHARACTER_VOICES.put("Lumi", "es-ES-ElviraNeural");
     }
 
     // pitch en Hz (positivo = más agudo/infantil) y rate en % (positivo = más rápido)
     private static final Map<String, int[]> VOICE_STYLES = new LinkedHashMap<>();
 
     static {
-        VOICE_STYLES.put("Intro", new int[]{12, 4});
-        VOICE_STYLES.put("Casquito", new int[]{-6, 3});
-        VOICE_STYLES.put("Tito", new int[]{-16, 1});
-        VOICE_STYLES.put("Sofía", new int[]{38, 8});
-        VOICE_STYLES.put("Nico", new int[]{45, 10});
-        VOICE_STYLES.put("Narrador", new int[]{-6, 3});
-        VOICE_STYLES.put("Luna", new int[]{42, 9});
-        VOICE_STYLES.put("Pipo", new int[]{32, 13});
-        VOICE_STYLES.put("Tico", new int[]{-12, 1});
-        VOICE_STYLES.put("Bruno", new int[]{-18, 1});
-        VOICE_STYLES.put("Memo", new int[]{-24, -3});
-        VOICE_STYLES.put("Coco", new int[]{40, 14});
+        // Deltas suaves: antes habia +45 Hz / +14%, suficiente para sonar sintetico.
+        VOICE_STYLES.put("Intro", new int[]{4, 2});
+        VOICE_STYLES.put("Casquito", new int[]{-4, 1});
+        VOICE_STYLES.put("Tito", new int[]{-6, 2});
+        VOICE_STYLES.put("Sofía", new int[]{10, 2});
+        VOICE_STYLES.put("Nico", new int[]{8, 3});
+        VOICE_STYLES.put("Narrador", new int[]{-3, 1});
+        VOICE_STYLES.put("Luna", new int[]{9, 2});
+        VOICE_STYLES.put("Pipo", new int[]{7, 3});
+        VOICE_STYLES.put("Tico", new int[]{-8, 0});
+        VOICE_STYLES.put("Bruno", new int[]{-10, 0});
+        VOICE_STYLES.put("Memo", new int[]{-9, -1});
+        VOICE_STYLES.put("Coco", new int[]{10, 3});
+        VOICE_STYLES.put("Rubí", new int[]{8, 2});
+        VOICE_STYLES.put("Lumi", new int[]{10, 1});
     }
 
     // volumen (en %) para que las voces se escuchen claras y con energía
     private static final Map<String, String> VOICE_VOLUMES = new LinkedHashMap<>();
 
     static {
-        VOICE_VOLUMES.put("Intro", "+6%");
-        VOICE_VOLUMES.put("Casquito", "+8%");
-        VOICE_VOLUMES.put("Tito", "+5%");
-        VOICE_VOLUMES.put("Sofía", "+8%");
-        VOICE_VOLUMES.put("Nico", "+10%");
-        VOICE_VOLUMES.put("Narrador", "+6%");
-        VOICE_VOLUMES.put("Luna", "+9%");
-        VOICE_VOLUMES.put("Pipo", "+10%");
-        VOICE_VOLUMES.put("Tico", "+5%");
-        VOICE_VOLUMES.put("Bruno", "+7%");
-        VOICE_VOLUMES.put("Memo", "+4%");
-        VOICE_VOLUMES.put("Coco", "+10%");
+        VOICE_VOLUMES.put("Intro", "+4%");
+        VOICE_VOLUMES.put("Casquito", "+5%");
+        VOICE_VOLUMES.put("Tito", "+4%");
+        VOICE_VOLUMES.put("Sofía", "+5%");
+        VOICE_VOLUMES.put("Nico", "+5%");
+        VOICE_VOLUMES.put("Narrador", "+4%");
+        VOICE_VOLUMES.put("Luna", "+5%");
+        VOICE_VOLUMES.put("Pipo", "+5%");
+        VOICE_VOLUMES.put("Tico", "+3%");
+        VOICE_VOLUMES.put("Bruno", "+4%");
+        VOICE_VOLUMES.put("Memo", "+3%");
+        VOICE_VOLUMES.put("Coco", "+5%");
+        VOICE_VOLUMES.put("Rubí", "+5%");
+        VOICE_VOLUMES.put("Lumi", "+4%");
     }
 
     private final Properties props = new Properties();

@@ -34,6 +34,8 @@ public final class SceneImage {
         PALETTE.put("Bruno", new Color(0xE8592E));
         PALETTE.put("Memo", new Color(0xB08968));
         PALETTE.put("Coco", new Color(0xFA5252));
+        PALETTE.put("Rubí", new Color(0xE0115F));
+        PALETTE.put("Lumi", new Color(0xFFD43B));
     }
 
     public static Color colorFor(String character) {

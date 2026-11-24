@@ -40,8 +40,8 @@ public final class Assembler {
         concatArgs.add("-map"); concatArgs.add("[v]");
         concatArgs.add("-map"); concatArgs.add("[a]");
         concatArgs.add("-c:v"); concatArgs.add("libx264");
-        concatArgs.add("-preset"); concatArgs.add("veryfast");
-        concatArgs.add("-crf"); concatArgs.add("23");
+        concatArgs.add("-preset"); concatArgs.add("medium");
+        concatArgs.add("-crf"); concatArgs.add("18");
         concatArgs.add("-c:a"); concatArgs.add("aac");
         concatArgs.add("-shortest");
         concatArgs.add(merged.toString());
@@ -53,7 +53,7 @@ public final class Assembler {
 
         Util.write(workDir.resolve("subtitulos.srt"), buildSrt(scenes, probeDur(cfg, merged)));
 
-        Path outFile = workDir.resolve(safeName(outName) + ".mp4").toAbsolutePath();
+        Path outFile = workDir.resolve(Util.safeName(outName) + ".mp4").toAbsolutePath();
         boolean hasMusic = bgMusic != null && Files.exists(bgMusic);
 
         Path amb = null;
@@ -107,7 +107,7 @@ public final class Assembler {
         String srtAbs = workDir.resolve("subtitulos.srt").toAbsolutePath().toString()
                 .replace("\\", "/").replace(":", "\\:");
         StringBuilder fc = new StringBuilder();
-        fc.append("[0:v]scale=1080:1920:flags=lanczos,unsharp=5:5:0.6:5:5:0.0,subtitles='").append(srtAbs)
+        fc.append("[0:v]scale=1080:1920:flags=lanczos,unsharp=5:5:0.4:5:5:0.0,subtitles='").append(srtAbs)
                 .append("':force_style='")
                 .append("FontName=Comic Sans MS,Fontsize=30,Bold=1,PrimaryColour=&H00FFFFFF,OutlineColour=&H00141414,")
                 .append("BorderStyle=1,Outline=3,Shadow=2,BackColour=&H80000000,Alignment=2,WrapStyle=2,")
@@ -122,7 +122,9 @@ public final class Assembler {
             if (sfx != null) {
                 fc.append(";[").append(sfxIdx).append(":a]volume=0.9[fxv]");
             }
-            fc.append(";[0:a]highpass=f=100,lowpass=f=9500,deesser=m=18,aecho=0.7:0.25:11:0.2[vp]")
+            // ffmpeg 9 exige i y m entre 0 y 1 (antes m=18 -> "Value out of range").
+            // Sin aecho: la cola artificial era parte del sonido "robotico".
+            fc.append(";[0:a]highpass=f=100,lowpass=f=9500,deesser=i=0.5:m=0.18[vp]")
                     .append(";[vp]asplit=2[voz][side]")
                     .append(";[mus][side]sidechaincompress=")
                     .append("threshold=0.03:ratio=12:attack=15:release=350:makeup=1[musf]");
@@ -132,9 +134,9 @@ public final class Assembler {
             if (sfx != null) { fuentes += "[fxv]"; total++; }
             fc.append(";").append(fuentes)
                     .append("amix=inputs=").append(total).append(":duration=first:normalize=0")
-                    .append(",aresample=48000,loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.9[a]");
+                    .append(",aresample=48000,loudnorm=I=-16:TP=-1.5:LRA=11,alimiter=limit=0.9[a]");
         } else {
-            fc.append(";[0:a]aresample=48000,loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.9[a]");
+            fc.append(";[0:a]aresample=48000,loudnorm=I=-16:TP=-1.5:LRA=11,alimiter=limit=0.9[a]");
         }
 
         fin.add("-filter_complex");
@@ -142,10 +144,10 @@ public final class Assembler {
         fin.add("-map"); fin.add("[v]");
         fin.add("-map"); fin.add("[a]");
         fin.add("-c:v"); fin.add("libx264");
-        fin.add("-preset"); fin.add("veryfast");
-        fin.add("-crf"); fin.add("20");
-        fin.add("-maxrate"); fin.add("5200k");
-        fin.add("-bufsize"); fin.add("10400k");
+        fin.add("-preset"); fin.add("medium");
+        fin.add("-crf"); fin.add("18");
+        fin.add("-maxrate"); fin.add("8000k");
+        fin.add("-bufsize"); fin.add("16000k");
         fin.add("-c:a"); fin.add("aac");
         fin.add("-b:a"); fin.add("160k");
         fin.add("-movflags"); fin.add("+faststart");
@@ -206,10 +208,6 @@ public final class Assembler {
         int s = ms / 1000;
         ms %= 1000;
         return String.format(Locale.ROOT, "%02d:%02d:%02d,%03d", h, m, s, ms);
-    }
-
-    private static String safeName(String name) {
-        return name == null || name.isBlank() ? "video" : name.replaceAll("[\\\\/:*?\"<>|]", "_");
     }
 
     private Assembler() {}

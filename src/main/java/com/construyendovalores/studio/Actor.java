@@ -757,6 +757,10 @@ final class Actor {
         if (n.equals(DESIGN_BRUNO)) return DESIGN_BRUNO;
         if (n.equals(DESIGN_MEMO)) return DESIGN_MEMO;
         if (n.equals(DESIGN_COCO)) return DESIGN_COCO;
+        // Rubi y Lumi no tienen malla propia en el dibujado vectorial:
+        // usan siluetas ya probadas con color propio hasta que haya diseno exclusivo.
+        if (n.equals("rubi")) return DESIGN_COCO;
+        if (n.equals("lumi")) return DESIGN_LUNA;
         return DESIGN_MASCOT;
     }
 

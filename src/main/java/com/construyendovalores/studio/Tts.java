@@ -26,7 +26,8 @@ public final class Tts {
             Map.entry("intro", "onyx"), Map.entry("casquito", "alloy"), Map.entry("tito", "onyx"),
             Map.entry("sofia", "shimmer"), Map.entry("nico", "alloy"), Map.entry("narrador", "onyx"),
             Map.entry("luna", "shimmer"), Map.entry("pipo", "alloy"), Map.entry("tico", "nova"),
-            Map.entry("bruno", "onyx"), Map.entry("memo", "onyx"), Map.entry("coco", "nova"));
+            Map.entry("bruno", "onyx"), Map.entry("memo", "onyx"), Map.entry("coco", "nova"),
+            Map.entry("rubi", "shimmer"), Map.entry("lumi", "nova"));
 
     /** Voces ElevenLabs por personaje (multilingüe). Config: elevenlabs.voice.<personaje>. */
     private static final Map<String, String> ELEVEN_VOICES = Map.ofEntries(
@@ -35,7 +36,8 @@ public final class Tts {
             Map.entry("sofia", "21m00Tcm4TlvDq8ikWAM"), Map.entry("nico", "TxGEqnHWrfWFTfGW9XjX"),
             Map.entry("luna", "EXAVITQu4vr4cSD2ZMEz"), Map.entry("pipo", "pNInz6obpgDQGcFmaJgB"),
             Map.entry("tico", "iP95p4xoKVk53GoZ742B"), Map.entry("bruno", "ErXwobaYiN019PkySvjV"),
-            Map.entry("memo", "nPczCjzI2devNBz1zQrb"), Map.entry("coco", "EXAVITQu4vr4cSD2ZMEz"));
+            Map.entry("memo", "nPczCjzI2devNBz1zQrb"), Map.entry("coco", "EXAVITQu4vr4cSD2ZMEz"),
+            Map.entry("rubi", "EXAVITQu4vr4cSD2ZMEz"), Map.entry("lumi", "21m00Tcm4TlvDq8ikWAM"));
 
     public static void synth(Config cfg, String character, String voice, String text, Path outMp3) {
         synth(cfg, character, voice, text, outMp3, "");
@@ -71,8 +73,8 @@ public final class Tts {
             clean += ".";
         }
         int[] m = emotionMatiz(emotion);
-        int rate = clamp(parseDelta(cfg.voiceRateFor(character)) + m[0], -30, 40);
-        int pitch = clamp(parseDelta(cfg.voicePitchFor(character)) + m[1], -60, 90);
+        int rate = clamp(parseDelta(cfg.voiceRateFor(character)) + m[0], -12, 16);
+        int pitch = clamp(parseDelta(cfg.voicePitchFor(character)) + m[1], -25, 30);
         StringBuilder log = new StringBuilder();
         List<String> cmd = new ArrayList<>();
         for (String part : cfg.pythonCmd().trim().split("\\s+")) cmd.add(part);
@@ -95,14 +97,15 @@ public final class Tts {
         if (emotion == null) emotion = "";
         switch (emotion.trim().toLowerCase().replace('á', 'a').replace('é', 'e')
                 .replace('í', 'i').replace('ó', 'o').replace('ú', 'u')) {
-            case "sorpresa": return new int[]{15, 32};
-            case "alegre":   return new int[]{12, 22};
-            case "curioso":  return new int[]{7, 14};
-            case "asustado": return new int[]{9, 18};
-            case "enojado":  return new int[]{17, 8};
-            case "triste":   return new int[]{-8, -26};
-            case "tranquilo":return new int[]{-5, -8};
-            case "orgulloso":return new int[]{7, 12};
+            // Deltas suaves: los valores altos son los que suenan roboticos.
+            case "sorpresa": return new int[]{6, 12};
+            case "alegre":   return new int[]{5, 10};
+            case "curioso":  return new int[]{3, 6};
+            case "asustado": return new int[]{4, 8};
+            case "enojado":  return new int[]{7, 4};
+            case "triste":   return new int[]{-4, -12};
+            case "tranquilo":return new int[]{-2, -4};
+            case "orgulloso":return new int[]{3, 6};
             default: return new int[]{0, 0};
         }
     }

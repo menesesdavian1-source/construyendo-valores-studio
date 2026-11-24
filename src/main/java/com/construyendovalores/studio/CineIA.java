@@ -25,13 +25,23 @@ import java.util.Map;
  */
 public final class CineIA {
 
+    // Raster nativo 1080x1920; las coordenadas de dibujo son LOGICAS 720x1280.
+    // Antes se usaban W/H (1080x1920) como coordenadas logicas con STAGE=1.5,
+    // lo que desplazaba y recortaba el cuadro (descentrado).
     private static final int W = 1080;
     private static final int H = 1920;
     private static final double STAGE = 1.5;
+    private static final int LW = 720;
+    private static final int LH = 1280;
     private static final int FPS = 25;
 
-    private static final String ESTILO = "animacion 3D premium para ninos tipo pelicula (estetica Pixar/Plim Plim), "
-            + "render volumetrico, luz suave y magica, colores vivos saturados, alto detalle, "
+    private static final String ESTILO = "ilustracion 3D fotorrealista de alta calidad para ninos, "
+            + "personajes antropomorficos tiernos con texturas reales de pelaje, piel y materiales, "
+            + "render cinematografico realista, iluminacion natural suave, luz volumetrica, "
+            + "profundidad de campo, colores vivos, ultra high resolution, 8K, ultra sharp focus, "
+            + "crystal clear details, perfectly rendered face, sharp eyes, highly detailed textures, "
+            + "HDR, masterpiece, professional studio quality, centered composition, full body visible, "
+            + "no blur, no out of focus, no noise, no pixelation, "
             + "sin texto, sin letras, sin marcas de agua, sin firmas";
 
     private static final Map<String, String> ESCENARIO = new HashMap<>();
@@ -73,6 +83,10 @@ public final class CineIA {
         LOOK.put("bruno", "Bruno, un camion volquete rojo con cara en la cabina y ruedas grandes, trabajador y fuerte");
         LOOK.put("memo", "Memo, un buho cafe con grandes ojos ambar y corbata, inteligente y cuidadoso");
         LOOK.put("coco", "Coco, una guacamaya colorida roja azul y amarilla, crestas vivas, alegre y parlanchina");
+        LOOK.put("rubi", "Rubi, una pequena dragona de escamas carmesis brillantes con grandes ojos ambar "
+                + "y alas redondas, capa amarilla de exploradora y prendedor dorado en forma de sol, dulce y valiente");
+        LOOK.put("lumi", "Lumi, una pequena luciernaga magica con alas translucidas y brillo dorado "
+                + "en el pecho, curiosa y serena");
     }
 
     public static void renderEscena(Config cfg, Scene sc, String title, Path outDir) throws Exception {
@@ -95,7 +109,7 @@ public final class CineIA {
             javax.imageio.ImageWriter writer = javax.imageio.ImageIO.getImageWritersBySuffix("jpg").next();
             javax.imageio.ImageWriteParam param = writer.getDefaultWriteParam();
             param.setCompressionMode(javax.imageio.ImageWriteParam.MODE_EXPLICIT);
-            param.setCompressionQuality(0.95f);
+            param.setCompressionQuality(0.98f);
             try (javax.imageio.stream.ImageOutputStream ios =
                          javax.imageio.ImageIO.createImageOutputStream(frame.toFile())) {
                 writer.setOutput(ios);
@@ -147,7 +161,8 @@ public final class CineIA {
         return null;
     }
 
-    /** Sube la definicion del arte barato (576x1024) a 1152x2048 con lanczos + unsharp, sin costo de IA. */
+    /** Sube la definicion del arte generado a 1152x2048 con lanczos, sin costo de IA.
+     *  El unsharp se aplica una sola vez al final (Assembler) para evitar halos. */
     private static void reescalarArte(Config cfg, Path archivo) {
         try {
             BufferedImage img = ImageIO.read(archivo.toFile());
@@ -163,11 +178,11 @@ public final class CineIA {
             cmd.add("-i");
             cmd.add(archivo.toString());
             cmd.add("-vf");
-            cmd.add("scale=1152:2048:flags=lanczos,unsharp=5:5:0.55:5:5:0.0");
+            cmd.add("scale=1152:2048:flags=lanczos");
             cmd.add(tmp.toString());
             if (Util.run(cmd, null, null) == 0 && Files.exists(tmp) && Files.size(tmp) > 20_000) {
                 Files.move(tmp, archivo, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                System.err.println("arte: reescalado a 1152x2048 (lanczos+unsharp)");
+                System.err.println("arte: reescalado a 1152x2048 (lanczos)");
             } else {
                 Files.deleteIfExists(tmp);
             }
@@ -186,19 +201,19 @@ public final class CineIA {
         g.scale(STAGE, STAGE);
 
         double[] cam = cameraAt(sc.index, intro, t, dur);
-        g.translate(W / 2.0, H / 2.0);
+        g.translate(LW / 2.0, LH / 2.0);
         g.scale(cam[2], cam[2]);
-        g.translate(-W / 2.0 + cam[0], -H / 2.0 + cam[1]);
+        g.translate(-LW / 2.0 + cam[0], -LH / 2.0 + cam[1]);
 
         if (bg != null) {
-            double s = Math.max(W / (double) bg.getWidth(), H / (double) bg.getHeight());
+            double s = Math.max(LW / (double) bg.getWidth(), LH / (double) bg.getHeight());
             int dw = (int) Math.ceil(bg.getWidth() * s);
             int dh = (int) Math.ceil(bg.getHeight() * s);
-            g.drawImage(bg, (W - dw) / 2, (H - dh) / 2, dw, dh, null);
+            g.drawImage(bg, (LW - dw) / 2, (LH - dh) / 2, dw, dh, null);
         } else {
             Color b = SceneImage.colorFor(sc.character);
-            g.setPaint(new GradientPaint(0, 0, SceneImage.lighten(b, 0.55f), 0, H, b.darker()));
-            g.fillRect(0, 0, W, H);
+            g.setPaint(new GradientPaint(0, 0, SceneImage.lighten(b, 0.55f), 0, LH, b.darker()));
+            g.fillRect(0, 0, LW, LH);
         }
 
         bottomGradiente(g);
@@ -220,7 +235,7 @@ public final class CineIA {
 
     private static void motas(Graphics2D g, double t) {
         for (int i = 0; i < 14; i++) {
-            double x = (i * 137 + t * 42) % (W + 80) - 40;
+            double x = (i * 137 + t * 42) % (LW + 80) - 40;
             double y = 220 + (i % 5) * 130 + Math.sin(t * 1.7 + i) * 16;
             int alfa = 70 + (i % 4) * 45;
             if (i % 3 == 0) {
@@ -238,17 +253,17 @@ public final class CineIA {
         if (fase < -0.4 || fase > 1.2) return;
         g.setComposite(java.awt.AlphaComposite.SrcOver.derive(0.05f));
         g.setPaint(new GradientPaint(
-                (int) (W * 0.2), (int) (H * 0.15 + fase * 700),
+                (int) (LW * 0.2), (int) (LH * 0.15 + fase * 700),
                 new Color(255, 255, 240),
-                (int) (W * 0.85), (int) (H * 0.45 + fase * 700),
+                (int) (LW * 0.85), (int) (LH * 0.45 + fase * 700),
                 new Color(255, 255, 240, 0)));
-        g.fillRect(0, 0, W, H);
+        g.fillRect(0, 0, LW, LH);
         g.setComposite(java.awt.AlphaComposite.SrcOver);
     }
 
     private static void bottomGradiente(Graphics2D g) {
-        g.setPaint(new GradientPaint(0, H * 0.62f, new Color(40, 20, 60, 0), 0, H, new Color(30, 16, 46, 120)));
-        g.fillRect(0, 0, W, H);
+        g.setPaint(new GradientPaint(0, LH * 0.62f, new Color(40, 20, 60, 0), 0, LH, new Color(30, 16, 46, 120)));
+        g.fillRect(0, 0, LW, LH);
     }
 
     private static void rotulo(Graphics2D g, String title, Scene sc) {
@@ -266,9 +281,9 @@ public final class CineIA {
             String tt = title.length() > 34 ? title.substring(0, 34) : title;
             int tw = fm.stringWidth(tt);
             g.setColor(new Color(20, 20, 40, 195));
-            g.fillRoundRect((W - tw) / 2 - 26, 120, tw + 52, 60, 16, 16);
+            g.fillRoundRect((LW - tw) / 2 - 26, 120, tw + 52, 60, 16, 16);
             g.setColor(Color.WHITE);
-            g.drawString(tt, (W - tw) / 2, 158);
+            g.drawString(tt, (LW - tw) / 2, 158);
         }
 
         if (sc.character != null && !sc.character.isBlank() && !"Narrador".equalsIgnoreCase(sc.character)) {
@@ -277,10 +292,10 @@ public final class CineIA {
             String who = sc.character.trim();
             FontMetrics fm = g.getFontMetrics();
             int tw = fm.stringWidth(who);
-            int chip = (W - tw) / 2 - 20;
+            int chip = (LW - tw) / 2 - 20;
             g.fillRoundRect(chip, 200, tw + 40, 52, 14, 14);
             g.setColor(Color.WHITE);
-            g.drawString(who, (W - tw) / 2, 233);
+            g.drawString(who, (LW - tw) / 2, 233);
         } else if (sc.character != null && "Narrador".equalsIgnoreCase(sc.character)) {
             g.setFont(new Font("Arial", Font.BOLD, 24));
             g.setColor(new Color(255, 255, 255, 210));
@@ -288,9 +303,9 @@ public final class CineIA {
             FontMetrics fm = g.getFontMetrics();
             int tw = fm.stringWidth(who);
             g.setColor(new Color(20, 20, 40, 180));
-            g.fillRoundRect((W - tw) / 2 - 18, 200, tw + 36, 46, 12, 12);
+            g.fillRoundRect((LW - tw) / 2 - 18, 200, tw + 36, 46, 12, 12);
             g.setColor(new Color(255, 235, 130));
-            g.drawString(who, (W - tw) / 2, 228);
+            g.drawString(who, (LW - tw) / 2, 228);
         }
     }
 
@@ -299,11 +314,11 @@ public final class CineIA {
         double scale = 0.7 + 0.3 * (1 - Math.pow(1 - pop, 3));
 
         g.setColor(new Color(20, 20, 40, 210));
-        g.fillRoundRect(60, 500, W - 120, 470, 44, 44);
+        g.fillRoundRect(60, 500, LW - 120, 470, 44, 44);
 
-        g.translate(W / 2, 630);
+        g.translate(LW / 2, 630);
         g.scale(scale, scale);
-        g.translate(-W / 2, -630);
+        g.translate(-LW / 2, -630);
 
         String t1 = "CONSTRUYENDO";
         String t2 = "VALORES";
@@ -311,40 +326,40 @@ public final class CineIA {
         g.setColor(Color.WHITE);
         FontMetrics fm = g.getFontMetrics();
         int w1 = fm.stringWidth(t1);
-        g.drawString(t1, (W - w1) / 2, 620);
+        g.drawString(t1, (LW - w1) / 2, 620);
         g.setFont(new Font("Arial", Font.BOLD, 110));
         fm = g.getFontMetrics();
         int w2 = fm.stringWidth(t2);
         g.setColor(new Color(255, 235, 130));
-        g.drawString(t2, (W - w2) / 2, 780);
+        g.drawString(t2, (LW - w2) / 2, 780);
         g.setFont(new Font("Arial", Font.BOLD, 26));
         fm = g.getFontMetrics();
         String tag = "Aprendemos valores mientras construimos";
         int wt = fm.stringWidth(tag);
         g.setColor(new Color(220, 220, 230));
-        g.drawString(tag, (W - wt) / 2, 892);
+        g.drawString(tag, (LW - wt) / 2, 892);
 
-        g.translate(W / 2, 630);
+        g.translate(LW / 2, 630);
         g.scale(1 / scale, 1 / scale);
-        g.translate(-W / 2, -630);
+        g.translate(-LW / 2, -630);
     }
 
     private static void grade(Graphics2D g) {
         g.setComposite(java.awt.AlphaComposite.SrcOver.derive(0.085f));
-        g.setPaint(new GradientPaint(0, H * 0.32f, new Color(255, 150, 70), 0, H, new Color(90, 40, 10)));
-        g.fillRect(0, 0, W, (int) (H * 0.62f));
+        g.setPaint(new GradientPaint(0, LH * 0.32f, new Color(255, 150, 70), 0, LH, new Color(90, 40, 10)));
+        g.fillRect(0, 0, LW, (int) (LH * 0.62f));
         g.setComposite(java.awt.AlphaComposite.SrcOver.derive(0.06f));
-        g.setPaint(new GradientPaint(0, 0, new Color(70, 130, 180), 0, H * 0.55f, new Color(70, 130, 180, 0)));
-        g.fillRect(0, 0, W, (int) (H * 0.55f));
+        g.setPaint(new GradientPaint(0, 0, new Color(70, 130, 180), 0, LH * 0.55f, new Color(70, 130, 180, 0)));
+        g.fillRect(0, 0, LW, (int) (LH * 0.55f));
         g.setComposite(java.awt.AlphaComposite.SrcOver);
     }
 
     private static void viñeta(Graphics2D g) {
-        RadialGradientPaint v = new RadialGradientPaint(W / 2f, H / 2f, H * 0.78f,
+        RadialGradientPaint v = new RadialGradientPaint(LW / 2f, LH / 2f, LH * 0.78f,
                 new float[]{0f, 0.78f, 1f},
                 new Color[]{new Color(0, 0, 0, 0), new Color(0, 0, 0, 0), new Color(16, 10, 30, 72)});
         g.setPaint(v);
-        g.fillRect(0, 0, W, H);
+        g.fillRect(0, 0, LW, LH);
     }
 
     /** Camara cinematografica: plano por indice, easing suave, pulso de mano. */

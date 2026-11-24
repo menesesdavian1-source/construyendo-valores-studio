@@ -19,10 +19,9 @@ public final class TechVideo {
         intro.scenario = "taller";
         scenes.add(intro);
 
-        String[] chars = {"Casquito", "Tito", "Sofía", "Nico"};
         int idx = 1;
         for (TechLibrary.Dato d : l.datos()) {
-            Scene sc = new Scene(idx, chars[idx % chars.length], d.narra());
+            Scene sc = new Scene(idx, Reparto.actor(l.titulo(), idx), d.narra());
             sc.scenario = "taller";
             sc.bigWord = d.palabra();
             sc.listNumber = idx;
@@ -53,10 +52,9 @@ public final class TechVideo {
         intro.scenario = "taller";
         scenes.add(intro);
 
-        String[] chars = {"Casquito", "Sofía", "Tito", "Nico"};
         int idx = 1;
         for (TechLibrary.Dato it : t.items()) {
-            Scene sc = new Scene(idx, chars[idx % chars.length], it.narra());
+            Scene sc = new Scene(idx, Reparto.actor(t.titulo(), idx), it.narra());
             sc.scenario = "taller";
             sc.bigWord = it.palabra();
             sc.revealAt = 0.62;

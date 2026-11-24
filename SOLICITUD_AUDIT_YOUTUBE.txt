@@ -17,8 +17,8 @@ DATOS QUE NECESITARAS (completalos antes de empezar)
 - PRIVACY POLICY URL:    https://menesesdavian1-source.github.io/construyendo-valores-web/privacy-policy.html
 - URL DEL CANAL:    https://www.youtube.com/channel/UCMD3CbCEBS0qH_-5_JlD9IQ  (@construyendovalores-i2r)
                     (renovarla en cualquier momento con:  --youtube-canal )
-- PROJECT ID numerico:   738382352973
-                          (es el prefijo del Client ID que usa la app)
+- PROJECT ID numerico:   Google Cloud > IAM y administracion > Configuracion
+                          > "Numero de proyecto" (empieza por mfk110... o similar).
 - SCOPE usados por la app:  https://www.googleapis.com/auth/youtube
 
 PASO 0 (2 min) - Preparar la consola de Google Cloud

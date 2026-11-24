@@ -15,9 +15,9 @@ public final class Pipeline {
         Files.createDirectories(audioDir);
         Files.createDirectories(clipsDir);
 
-        List<Scene> scenes = new java.util.ArrayList<>();
-        scenes.add(introScene());
-        scenes.addAll(script.scenes());
+        // Sin tarjeta de introduccion: el cuento empieza en el primer fotograma
+        // (retencion) y la marca vive en el rotulo, no en una voz generica.
+        List<Scene> scenes = new java.util.ArrayList<>(script.scenes());
         String globalScenario = cfg.get("video.scenario", Scenario.OBRA.id);
         for (Scene sc : scenes) {
             if (sc.scenario == null || sc.scenario.isBlank()) {
@@ -84,10 +84,6 @@ public final class Pipeline {
         return script;
     }
 
-    public static Scene introScene() {
-        return new Scene(0, "Intro", "¡Bienvenidos a Construyendo Valores! Hoy aprenderemos algo grandioso.");
-    }
-
     public static String exampleJson() {
         return """
                 {
@@ -127,9 +123,7 @@ public final class Pipeline {
     public static java.util.List<Scene> scenesConAudio(Config cfg, Path outDir) throws Exception {
         String raw = Files.readString(outDir.resolve("guion.json"));
         ScriptParser.Script script = ScriptParser.parse(raw);
-        java.util.List<Scene> scenes = new java.util.ArrayList<>();
-        scenes.add(introScene());
-        scenes.addAll(script.scenes());
+        java.util.List<Scene> scenes = new java.util.ArrayList<>(script.scenes());
         for (Scene sc : scenes) {
             Path audio = outDir.resolve("audio").resolve("escena_" + sc.index + "_studio.mp3");
             if (!Files.exists(audio)) {
@@ -148,9 +142,7 @@ public final class Pipeline {
         String raw = Files.readString(outDir.resolve("guion.json"));
         ScriptParser.Script script = ScriptParser.parse(raw);
 
-        List<Scene> scenes = new java.util.ArrayList<>();
-        scenes.add(introScene());
-        scenes.addAll(script.scenes());
+        List<Scene> scenes = new java.util.ArrayList<>(script.scenes());
         for (Scene sc : scenes) {
             Path audio = outDir.resolve("audio").resolve("escena_" + sc.index + "_studio.mp3");
             if (!Files.exists(audio)) {

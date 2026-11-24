@@ -73,7 +73,7 @@ public final class DailyVideo {
         log.accept("Generando la ronda (melodía sintetizada, sin IA)...");
         RondaVideo.build(cfg, r, outDir, log);
 
-        Path video = outDir.resolve(r.titulo() + ".mp4");
+        Path video = videoPath(outDir, r.titulo());
         if (!Files.exists(video)) {
             throw new IllegalStateException("No se pudo localizar el video final: " + video);
         }
@@ -132,7 +132,7 @@ public final class DailyVideo {
 
         log.accept("Generando el video...");
         Pipeline.exec(cfg, script, outDir, log);
-        Path video = outDir.resolve(script.title() + ".mp4");
+        Path video = videoPath(outDir, script.title());
         if (!Files.exists(video)) {
             throw new IllegalStateException("No se pudo localizar el video final: " + video);
         }
@@ -178,7 +178,7 @@ public final class DailyVideo {
                 TechLibrary.Listicle l = TechLibrary.listicleByIndex(i);
                 log.accept("Video del día: TECNOLOGÍA [LISTA 5 DATOS] -> " + l.titulo());
                 TechVideo.buildListicle(cfg, l, outDir, log);
-                video = outDir.resolve(l.titulo() + ".mp4");
+                video = videoPath(outDir, l.titulo());
                 if (!Files.exists(video)) throw new IllegalStateException("No se localizó el listicle: " + video);
                 titulo = l.titulo();
                 desc = l.valor() + ". " + l.intro() + "\n\nTecnología e historia para niños: inventos que cambian el mundo.\n"
@@ -193,7 +193,7 @@ public final class DailyVideo {
                 TechLibrary.Trivia t = TechLibrary.triviaByIndex(i);
                 log.accept("Video del día: TECNOLOGÍA [TRIVIA] -> " + t.titulo());
                 TechVideo.buildTrivia(cfg, t, outDir, log);
-                video = outDir.resolve(t.titulo() + ".mp4");
+                video = videoPath(outDir, t.titulo());
                 if (!Files.exists(video)) throw new IllegalStateException("No se localizó la trivia: " + video);
                 titulo = t.titulo();
                 desc = t.valor() + ". Adivina el invento antes de que aparezca la respuesta.\n\n"
@@ -209,7 +209,7 @@ public final class DailyVideo {
                 log.accept("Video del día: TECNOLOGÍA [RONDA] -> " + r.titulo());
                 cfg.set("video.scenario", r.escenario());
                 RondaVideo.build(cfg, r, outDir, log);
-                video = outDir.resolve(r.titulo() + ".mp4");
+                video = videoPath(outDir, r.titulo());
                 if (!Files.exists(video)) throw new IllegalStateException("No se localizó la ronda: " + video);
                 titulo = r.titulo();
                 desc = r.descripcion() + "\n\n🎶 Ronda de tecnología para cantar y bailar.\n"
@@ -235,7 +235,7 @@ public final class DailyVideo {
                     script = TechLibrary.fallbackHistoria(h);
                 }
                 Pipeline.exec(cfg, script, outDir, log);
-                video = outDir.resolve(script.title() + ".mp4");
+                video = videoPath(outDir, script.title());
                 if (!Files.exists(video)) throw new IllegalStateException("No se localizó la historia: " + video);
                 titulo = script.title();
                 desc = h.valor() + ". Historia de la tecnología para niños.\n\n"
@@ -272,7 +272,7 @@ public final class DailyVideo {
                 TechLibrary.Trivia t = SerieLibrary.preguntaByIndex(i);
                 log.accept("Video del día: SERIE [LA PREGUNTA DE HOY] -> " + t.titulo());
                 TechVideo.buildTrivia(cfg, t, outDir, log);
-                video = outDir.resolve(t.titulo() + ".mp4");
+                video = videoPath(outDir, t.titulo());
                 if (!Files.exists(video)) throw new IllegalStateException("No se localizó la pregunta: " + video);
                 titulo = t.titulo();
                 desc = SerieLibrary.preguntaDesc(t);
@@ -289,7 +289,7 @@ public final class DailyVideo {
                 cfg.set("video.scenario", SerieLibrary.scenarioOf(base, "parque"));
                 log.accept("Video del día: SERIE [TITO EN 60 SEGUNDOS] -> " + cTitle);
                 Pipeline.exec(cfg, script, outDir, log);
-                video = outDir.resolve(cTitle + ".mp4");
+                video = videoPath(outDir, cTitle);
                 if (!Files.exists(video)) throw new IllegalStateException("No se localizó el mini cuento: " + video);
                 titulo = cTitle;
                 desc = SerieLibrary.titoDesc(cTitle, base.title());
@@ -306,7 +306,7 @@ public final class DailyVideo {
                 cfg.set("video.scenario", SerieLibrary.scenarioOf(script, "taller"));
                 log.accept("Video del día: SERIE [INVENTOR SECRETO] -> " + script.title());
                 Pipeline.exec(cfg, script, outDir, log);
-                video = outDir.resolve(script.title() + ".mp4");
+                video = videoPath(outDir, script.title());
                 if (!Files.exists(video)) throw new IllegalStateException("No se localizó el inventor: " + video);
                 titulo = script.title();
                 desc = SerieLibrary.inventorDesc(script);
@@ -320,7 +320,7 @@ public final class DailyVideo {
                 log.accept("Video del día: SERIE [CANTA Y APRENDE] -> " + r.titulo());
                 cfg.set("video.scenario", r.escenario());
                 RondaVideo.build(cfg, r, outDir, log);
-                video = outDir.resolve(r.titulo() + ".mp4");
+                video = videoPath(outDir, r.titulo());
                 if (!Files.exists(video)) throw new IllegalStateException("No se localizó la canción: " + video);
                 titulo = r.titulo();
                 desc = SerieLibrary.cantaDesc(r);
@@ -334,7 +334,7 @@ public final class DailyVideo {
                 log.accept("Video del día: SERIE [RETO EN FAMILIA] -> " + r.titulo());
                 cfg.set("video.scenario", r.escenario());
                 RondaVideo.build(cfg, r, outDir, log);
-                video = outDir.resolve(r.titulo() + ".mp4");
+                video = videoPath(outDir, r.titulo());
                 if (!Files.exists(video)) throw new IllegalStateException("No se localizó el reto: " + video);
                 titulo = r.titulo();
                 desc = SerieLibrary.retoDesc(r);
@@ -390,10 +390,24 @@ public final class DailyVideo {
         Properties p = new Properties();
         p.load(Files.newBufferedReader(dayDir.resolve("dia.properties"), StandardCharsets.UTF_8));
         String archivo = p.getProperty("archivo", "");
-        Path video = dayDir.resolve(archivo);
+        Path video = dayDir.resolve(Util.safeName(archivo));
         if (!Files.exists(video)) {
-            throw new IllegalStateException("El video programado no existe: " + video
-                    + ". Rerenderiza con --semanario o elimina la carpeta del día.");
+            // Colas antiguas guardaron el título sin sanear: busca el único mp4 final de ese día.
+            List<Path> candidatos;
+            try (var s = Files.list(dayDir)) {
+                candidatos = s.filter(Files::isRegularFile)
+                        .filter(x -> x.getFileName().toString().toLowerCase().endsWith(".mp4"))
+                        .filter(x -> !x.getFileName().toString().equalsIgnoreCase("merged.mp4")
+                                && !x.getFileName().toString().contains(" - Short"))
+                        .toList();
+            }
+            if (candidatos.size() == 1) {
+                video = candidatos.get(0);
+                log.accept("AVISO: 'archivo' de la cola no coincidía; usando " + video.getFileName());
+            } else {
+                throw new IllegalStateException("El video programado no existe: " + video
+                        + ". Rerenderiza con --semanario o elimina la carpeta del día.");
+            }
         }
         String titulo = p.getProperty("titulo", archivo);
         String desc = p.getProperty("desc", "");
@@ -497,11 +511,22 @@ public final class DailyVideo {
         }
     }
 
+    /** Mismo nombre que usa Assembler para el archivo final (los títulos con ?/: no son válidos en Windows). */
+    private static Path videoPath(Path outDir, String titulo) {
+        return outDir.resolve(Util.safeName(titulo) + ".mp4");
+    }
+
     public static OffsetDateTime nextPublish(int hour) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime target = now.withHour(hour).withMinute(0).withSecond(0).withNano(0);
         if (!target.isAfter(now)) {
             target = target.plusDays(1);
+        }
+        // YouTube exige publishAt al menos 2 h en el futuro; con la tarea de las 07:00
+        // las 09:00 quedaban a menos de 2 h y la API respondía 400 invalidPublishAt.
+        LocalDateTime minimo = now.plusHours(2).plusMinutes(15);
+        if (target.isBefore(minimo)) {
+            target = minimo.withSecond(0).withNano(0).plusMinutes(5 - (minimo.getMinute() % 5));
         }
         return target.atZone(ZoneId.systemDefault()).toOffsetDateTime();
     }

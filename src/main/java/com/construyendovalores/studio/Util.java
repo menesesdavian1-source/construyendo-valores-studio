@@ -28,6 +28,11 @@ public final class Util {
         }
     }
 
+    /** Nombre de archivo válido en Windows a partir de un título (sin alterar el título publicado). */
+    public static String safeName(String name) {
+        return name == null || name.isBlank() ? "video" : name.replaceAll("[\\\\/:*?\"<>|]", "_").trim();
+    }
+
     public static int run(List<String> cmd, Path workDir, StringBuilder log) {
         if (log != null) log.append("$ ").append(String.join(" ", cmd)).append("\n");
         try {

@@ -6,8 +6,8 @@ import java.util.List;
 
 /**
  * Cadena de voz "de estudio" para narraciones y canciones:
- * alta impedancia (quita ruido grave), ecualizacion (limpia + presencia),
- * eco breve de sala y loudness I=-16 LUFS. Aplica a rondas y cuentos por igual.
+ * alta impedancia (quita ruido grave), ecualizacion (limpia + presencia) y
+ * loudness I=-16 LUFS. Sin eco: la cola artificial endurecia la voz.
  */
 public final class AudioStudio {
 
@@ -16,7 +16,6 @@ public final class AudioStudio {
         List<String> cmd = List.of(cfg.ffmpeg(), "-y", "-i", src.toString(),
                 "-af", "highpass=f=70,equalizer=f=260:t=q:w=1.1:g=-2,"
                         + "equalizer=f=3000:t=q:w=1:g=1.5,"
-                        + "aecho=0.72:0.62:60|115:0.26|0.19,"
                         + "loudnorm=I=-16:TP=-1.5:LRA=11",
                 "-c:a", "libmp3lame", "-q:a", "4", dst.toString());
         int code = Util.run(cmd, null, log);
