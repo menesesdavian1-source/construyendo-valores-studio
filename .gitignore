@@ -16,3 +16,19 @@ demo_youtube_api_log.txt
 # Configuracion local (claves/credenciales)
 config.properties
 *.properties
+# Credenciales de respaldo
+.env
+youtube_tokens.json
+client_secret*.json
+token*.json
+*.key
+
+# Produccion (pesada)
+salidas/
+canciones/
+cuentos/
+clips_campana/
+clips_reserva/
+videos_muestra/
+marca_canal/
+*.wav
