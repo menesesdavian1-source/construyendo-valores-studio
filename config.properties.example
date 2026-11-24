@@ -1,0 +1,72 @@
+# Construyendo Valores Studio - example configuration
+#
+# Copy this file to "config.properties" and fill in your own values.
+# NEVER commit config.properties: it is listed in .gitignore and holds secrets.
+# Keys marked (secret) must stay private. All values below are intentionally empty.
+
+# ---------------------------------------------------------------
+# YouTube (OAuth 2.0 desktop client from your own Google Cloud project)
+# ---------------------------------------------------------------
+youtube.clientId=
+youtube.clientSecret=
+# public | private | unlisted
+youtube.privacyStatus=
+youtube.categoryId=
+youtube.publishHour=
+youtube.authTimeoutMin=
+
+# ---------------------------------------------------------------
+# AI providers (each key is a secret; leave empty to disable)
+# ---------------------------------------------------------------
+openai.apiKey=
+openai.model=
+openai.imagenModel=
+gemini.imagenModel=
+pollinations.token=
+pollinations.model=
+pollinations.enhance=
+freeia.apiKey=
+freeia.habilitado=
+elevenlabs.apiKey=
+elevenlabs.model=
+
+# Provider order / fallbacks
+ia.orden=
+ia.critica=
+imagen.orden=
+tts.engine=
+
+# ---------------------------------------------------------------
+# TikTok (optional)
+# ---------------------------------------------------------------
+tiktok.clientKey=
+tiktok.clientSecret=
+tiktok.handle=
+tiktok.auto=
+
+# ---------------------------------------------------------------
+# Production and quality settings
+# ---------------------------------------------------------------
+cine.habilitado=
+video.scenario=
+personajes.lista=
+calidad.auto=
+calidad.umbral=
+calidad.movimiento=
+calidad.referencia=
+clipper.umbral=
+clipper.agua=
+clipper.gancho=
+competidores.ids=
+
+# ---------------------------------------------------------------
+# Managed automatically by the tool (do not fill in by hand)
+# ---------------------------------------------------------------
+# canal.lastUploadDate, canal.lastVideoId, canal.videoCount,
+# canal.videoIndex, canal.rondaIndex, metricas.ultimaConsulta,
+# competidores.ultimaConsulta, proceso.mejoraVersion,
+# tiktok.accessToken, tiktok.refreshToken, tiktok.tokenExpiresAt
+#
+# Some settings are read with a suffix (for example per-character or
+# per-voice keys under the prefixes "personaje.", "openai.voice.",
+# "elevenlabs.voice." and "ia."). See the source code for the exact names.
